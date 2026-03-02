@@ -15,6 +15,7 @@ import {
   Check,
   GraduationCap,
   Hash,
+  Loader2,
   MessageCircle,
   Search,
   UserPlus,
@@ -22,11 +23,12 @@ import {
   X,
 } from "lucide-react";
 import { motion } from "motion/react";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { RoleBadge } from "../components/RoleBadge";
 import { UserAvatar } from "../components/UserAvatar";
 import { useApp } from "../context/AppContext";
-import type { LocalUserProfile, Post } from "../types/campus";
+import { useActor } from "../hooks/useActor";
+import type { LocalUserProfile, Post, UserRole } from "../types/campus";
 import { formatTimeAgo } from "../utils/helpers";
 import { getAllUserProfiles } from "../utils/storage";
 
@@ -41,6 +43,7 @@ export function DirectoryPage() {
     getFriendshipStatus,
     friendRequests,
   } = useApp();
+  const { actor, isFetching: actorFetching } = useActor();
   const [query, setQuery] = useState("");
   const [courseFilter, setCourseFilter] = useState("all");
   const [divisionFilter, setDivisionFilter] = useState("all");
@@ -48,12 +51,52 @@ export function DirectoryPage() {
   const [viewingProfile, setViewingProfile] = useState<LocalUserProfile | null>(
     null,
   );
+  const [backendProfiles, setBackendProfiles] = useState<LocalUserProfile[]>(
+    [],
+  );
+  const [loadingProfiles, setLoadingProfiles] = useState(true);
+
+  // Load profiles from backend on mount
+  useEffect(() => {
+    if (!actor || actorFetching) return;
+
+    async function loadProfiles() {
+      setLoadingProfiles(true);
+      try {
+        const results = await actor!.getAllProfilesPublic();
+        const mapped: LocalUserProfile[] = results.map((p) => ({
+          name: p.name,
+          avatarUrl: p.avatarUrl || "",
+          rollNumber: p.rollNumber || "",
+          role: (p.role as UserRole) || "Student",
+          department: p.department || "",
+          year: p.yearOfDegree || "",
+          bio: p.bio || "",
+          principalId: p.principalId,
+          course: p.course || "",
+          yearOfDegree: p.yearOfDegree || "",
+          division: p.division || "",
+          email: p.email || "",
+          mobile: p.mobile || "",
+        }));
+        setBackendProfiles(mapped);
+      } catch {
+        // Fall back to localStorage
+        setBackendProfiles(getAllUserProfiles());
+      } finally {
+        setLoadingProfiles(false);
+      }
+    }
+
+    loadProfiles();
+  }, [actor, actorFetching]);
 
   const allProfiles = useMemo(() => {
-    const profiles = getAllUserProfiles();
+    const source =
+      backendProfiles.length > 0 ? backendProfiles : getAllUserProfiles();
     // Filter out current user
-    return profiles.filter((p) => p.principalId !== currentUser?.principalId);
-  }, [currentUser]);
+    return source.filter((p) => p.principalId !== currentUser?.principalId);
+  }, [backendProfiles, currentUser]);
 
   // Derive unique filters
   const courses = useMemo(() => {
@@ -107,6 +150,15 @@ export function DirectoryPage() {
     courseFilter !== "all" ||
     divisionFilter !== "all" ||
     yearFilter !== "all";
+
+  if (loadingProfiles && actorFetching) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[40vh] gap-3">
+        <Loader2 className="w-6 h-6 animate-spin text-primary" />
+        <p className="text-sm text-muted-foreground">Loading directory...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-3xl mx-auto px-4 py-6 space-y-5">

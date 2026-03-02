@@ -23,6 +23,7 @@ import { motion } from "motion/react";
 import { useState } from "react";
 import { toast } from "sonner";
 import { useApp } from "../context/AppContext";
+import type { LocalUserProfile } from "../types/campus";
 import { getAllUserProfiles, saveUserProfile } from "../utils/storage";
 
 export function SettingsPage() {
@@ -85,7 +86,21 @@ export function SettingsPage() {
         <DataPrivacySection currentUser={currentUser} />
       </motion.div>
 
-      {/* Admin Section */}
+      {/* Admin Bootstrap — visible to non-admins so they can promote themselves */}
+      {currentUser.role !== "Admin" && (
+        <motion.div
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.35, delay: 0.25 }}
+        >
+          <BecomeAdminSection
+            currentUser={currentUser}
+            onPromoted={(updated) => setCurrentUser(updated)}
+          />
+        </motion.div>
+      )}
+
+      {/* Admin Section — only for existing admins */}
       {currentUser.role === "Admin" && (
         <motion.div
           initial={{ opacity: 0, y: 12 }}
@@ -500,9 +515,69 @@ function DataPrivacySection({
   );
 }
 
+// ─── Become Admin Section ─────────────────────────────────────────────────────
+
+function BecomeAdminSection({
+  currentUser,
+  onPromoted,
+}: {
+  currentUser: LocalUserProfile;
+  onPromoted: (updated: LocalUserProfile) => void;
+}) {
+  const [promoting, setPromoting] = useState(false);
+
+  function handleBecomeAdmin() {
+    setPromoting(true);
+    setTimeout(() => {
+      const updated: LocalUserProfile = { ...currentUser, role: "Admin" };
+      saveUserProfile(updated);
+      onPromoted(updated);
+      toast.success("You are now an Admin! Refresh the page if needed.");
+      setPromoting(false);
+    }, 400);
+  }
+
+  return (
+    <Card className="rounded-2xl border-amber-300/50 shadow-card">
+      <CardHeader className="pb-3">
+        <CardTitle className="flex items-center gap-2 font-display text-base font-semibold">
+          <Shield className="w-4 h-4 text-amber-600" />
+          Admin Access
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-3">
+        <p className="text-sm text-muted-foreground">
+          Promote your account to Admin to access the Admin Panel, manage
+          students, and export data.
+        </p>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={handleBecomeAdmin}
+          disabled={promoting}
+          className="rounded-xl gap-2 border-amber-400/60 text-amber-700 hover:bg-amber-50 dark:text-amber-400 dark:hover:bg-amber-950/30"
+        >
+          {promoting ? (
+            <>
+              <Loader2 className="w-4 h-4 animate-spin" />
+              Promoting...
+            </>
+          ) : (
+            <>
+              <Shield className="w-4 h-4" />
+              Make me Admin
+            </>
+          )}
+        </Button>
+      </CardContent>
+    </Card>
+  );
+}
+
 // ─── Admin Section ────────────────────────────────────────────────────────────
 
 function AdminSection() {
+  const { setActiveTab } = useApp();
   const [exporting, setExporting] = useState(false);
 
   function handleExportCSV() {
@@ -574,27 +649,38 @@ function AdminSection() {
       </CardHeader>
       <CardContent className="space-y-3">
         <p className="text-sm text-muted-foreground">
-          Export all registered student data as a CSV spreadsheet.
+          View all registered students, manage roles, and export data.
         </p>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={handleExportCSV}
-          disabled={exporting}
-          className="rounded-xl gap-2 border-destructive/40 text-destructive hover:bg-destructive/5"
-        >
-          {exporting ? (
-            <>
-              <Loader2 className="w-4 h-4 animate-spin" />
-              Exporting...
-            </>
-          ) : (
-            <>
-              <Download className="w-4 h-4" />
-              Export All Student Data (CSV)
-            </>
-          )}
-        </Button>
+        <div className="flex flex-wrap gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setActiveTab("admin")}
+            className="rounded-xl gap-2 border-primary/40 text-primary hover:bg-primary/5"
+          >
+            <Shield className="w-4 h-4" />
+            Go to Admin Panel
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleExportCSV}
+            disabled={exporting}
+            className="rounded-xl gap-2 border-destructive/40 text-destructive hover:bg-destructive/5"
+          >
+            {exporting ? (
+              <>
+                <Loader2 className="w-4 h-4 animate-spin" />
+                Exporting...
+              </>
+            ) : (
+              <>
+                <Download className="w-4 h-4" />
+                Export All Student Data (CSV)
+              </>
+            )}
+          </Button>
+        </div>
       </CardContent>
     </Card>
   );

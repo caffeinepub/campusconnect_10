@@ -89,10 +89,19 @@ export class ExternalBlob {
         return this;
     }
 }
-export interface UserProfile {
+export interface StudentProfile {
+    bio: string;
     name: string;
+    role: string;
+    division: string;
+    email: string;
+    yearOfDegree: string;
     avatarUrl: string;
     rollNumber: string;
+    mobile: string;
+    department: string;
+    course: string;
+    principalId: string;
 }
 export interface _CaffeineStorageCreateCertificateResult {
     method: string;
@@ -119,13 +128,19 @@ export interface backendInterface {
     _caffeineStorageUpdateGatewayPrincipals(): Promise<void>;
     _initializeAccessControlWithSecret(userSecret: string): Promise<void>;
     assignCallerUserRole(user: Principal, role: UserRole): Promise<void>;
-    getCallerUserProfile(): Promise<UserProfile | null>;
+    deleteProfile(principalId: string): Promise<void>;
+    getAllProfiles(): Promise<Array<StudentProfile>>;
+    getAllProfilesPublic(): Promise<Array<StudentProfile>>;
+    getCallerUserProfile(): Promise<StudentProfile | null>;
     getCallerUserRole(): Promise<UserRole>;
-    getUserProfile(user: Principal): Promise<UserProfile | null>;
+    getMyProfile(): Promise<StudentProfile | null>;
+    getUserProfile(user: Principal): Promise<StudentProfile | null>;
     isCallerAdmin(): Promise<boolean>;
-    saveCallerUserProfile(profile: UserProfile): Promise<void>;
+    registerUser(profile: StudentProfile): Promise<void>;
+    saveCallerUserProfile(profile: StudentProfile): Promise<void>;
+    updateProfile(profile: StudentProfile): Promise<void>;
 }
-import type { UserProfile as _UserProfile, UserRole as _UserRole, _CaffeineStorageRefillInformation as __CaffeineStorageRefillInformation, _CaffeineStorageRefillResult as __CaffeineStorageRefillResult } from "./declarations/backend.did.d.ts";
+import type { StudentProfile as _StudentProfile, UserRole as _UserRole, _CaffeineStorageRefillInformation as __CaffeineStorageRefillInformation, _CaffeineStorageRefillResult as __CaffeineStorageRefillResult } from "./declarations/backend.did.d.ts";
 export class Backend implements backendInterface {
     constructor(private actor: ActorSubclass<_SERVICE>, private _uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, private _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, private processError?: (error: unknown) => never){}
     async _caffeineStorageBlobIsLive(arg0: Uint8Array): Promise<boolean> {
@@ -240,7 +255,49 @@ export class Backend implements backendInterface {
             return result;
         }
     }
-    async getCallerUserProfile(): Promise<UserProfile | null> {
+    async deleteProfile(arg0: string): Promise<void> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.deleteProfile(arg0);
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.deleteProfile(arg0);
+            return result;
+        }
+    }
+    async getAllProfiles(): Promise<Array<StudentProfile>> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.getAllProfiles();
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.getAllProfiles();
+            return result;
+        }
+    }
+    async getAllProfilesPublic(): Promise<Array<StudentProfile>> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.getAllProfilesPublic();
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.getAllProfilesPublic();
+            return result;
+        }
+    }
+    async getCallerUserProfile(): Promise<StudentProfile | null> {
         if (this.processError) {
             try {
                 const result = await this.actor.getCallerUserProfile();
@@ -268,7 +325,21 @@ export class Backend implements backendInterface {
             return from_candid_UserRole_n11(this._uploadFile, this._downloadFile, result);
         }
     }
-    async getUserProfile(arg0: Principal): Promise<UserProfile | null> {
+    async getMyProfile(): Promise<StudentProfile | null> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.getMyProfile();
+                return from_candid_opt_n10(this._uploadFile, this._downloadFile, result);
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.getMyProfile();
+            return from_candid_opt_n10(this._uploadFile, this._downloadFile, result);
+        }
+    }
+    async getUserProfile(arg0: Principal): Promise<StudentProfile | null> {
         if (this.processError) {
             try {
                 const result = await this.actor.getUserProfile(arg0);
@@ -296,7 +367,21 @@ export class Backend implements backendInterface {
             return result;
         }
     }
-    async saveCallerUserProfile(arg0: UserProfile): Promise<void> {
+    async registerUser(arg0: StudentProfile): Promise<void> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.registerUser(arg0);
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.registerUser(arg0);
+            return result;
+        }
+    }
+    async saveCallerUserProfile(arg0: StudentProfile): Promise<void> {
         if (this.processError) {
             try {
                 const result = await this.actor.saveCallerUserProfile(arg0);
@@ -310,6 +395,20 @@ export class Backend implements backendInterface {
             return result;
         }
     }
+    async updateProfile(arg0: StudentProfile): Promise<void> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.updateProfile(arg0);
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.updateProfile(arg0);
+            return result;
+        }
+    }
 }
 function from_candid_UserRole_n11(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: _UserRole): UserRole {
     return from_candid_variant_n12(_uploadFile, _downloadFile, value);
@@ -317,7 +416,7 @@ function from_candid_UserRole_n11(_uploadFile: (file: ExternalBlob) => Promise<U
 function from_candid__CaffeineStorageRefillResult_n4(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: __CaffeineStorageRefillResult): _CaffeineStorageRefillResult {
     return from_candid_record_n5(_uploadFile, _downloadFile, value);
 }
-function from_candid_opt_n10(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: [] | [_UserProfile]): UserProfile | null {
+function from_candid_opt_n10(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: [] | [_StudentProfile]): StudentProfile | null {
     return value.length === 0 ? null : value[0];
 }
 function from_candid_opt_n6(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: [] | [boolean]): boolean | null {

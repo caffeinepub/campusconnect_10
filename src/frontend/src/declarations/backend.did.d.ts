@@ -10,10 +10,19 @@ import type { ActorMethod } from '@icp-sdk/core/agent';
 import type { IDL } from '@icp-sdk/core/candid';
 import type { Principal } from '@icp-sdk/core/principal';
 
-export interface UserProfile {
+export interface StudentProfile {
+  'bio' : string,
   'name' : string,
+  'role' : string,
+  'division' : string,
+  'email' : string,
+  'yearOfDegree' : string,
   'avatarUrl' : string,
   'rollNumber' : string,
+  'mobile' : string,
+  'department' : string,
+  'course' : string,
+  'principalId' : string,
 }
 export type UserRole = { 'admin' : null } |
   { 'user' : null } |
@@ -47,11 +56,17 @@ export interface _SERVICE {
   '_caffeineStorageUpdateGatewayPrincipals' : ActorMethod<[], undefined>,
   '_initializeAccessControlWithSecret' : ActorMethod<[string], undefined>,
   'assignCallerUserRole' : ActorMethod<[Principal, UserRole], undefined>,
-  'getCallerUserProfile' : ActorMethod<[], [] | [UserProfile]>,
+  'deleteProfile' : ActorMethod<[string], undefined>,
+  'getAllProfiles' : ActorMethod<[], Array<StudentProfile>>,
+  'getAllProfilesPublic' : ActorMethod<[], Array<StudentProfile>>,
+  'getCallerUserProfile' : ActorMethod<[], [] | [StudentProfile]>,
   'getCallerUserRole' : ActorMethod<[], UserRole>,
-  'getUserProfile' : ActorMethod<[Principal], [] | [UserProfile]>,
+  'getMyProfile' : ActorMethod<[], [] | [StudentProfile]>,
+  'getUserProfile' : ActorMethod<[Principal], [] | [StudentProfile]>,
   'isCallerAdmin' : ActorMethod<[], boolean>,
-  'saveCallerUserProfile' : ActorMethod<[UserProfile], undefined>,
+  'registerUser' : ActorMethod<[StudentProfile], undefined>,
+  'saveCallerUserProfile' : ActorMethod<[StudentProfile], undefined>,
+  'updateProfile' : ActorMethod<[StudentProfile], undefined>,
 }
 export declare const idlService: IDL.ServiceClass;
 export declare const idlInitArgs: IDL.Type[];

@@ -112,10 +112,19 @@ export function ProfilePage() {
       const avatarUrl = await resizeImageToDataUrl(file, 256);
 
       if (actor) {
-        await actor.saveCallerUserProfile({
+        await actor.updateProfile({
+          principalId: user.principalId,
           name: user.name,
           avatarUrl,
           rollNumber: user.rollNumber ?? "",
+          role: user.role,
+          department: user.department ?? "",
+          bio: user.bio ?? "",
+          course: user.course ?? "",
+          yearOfDegree: user.yearOfDegree ?? "",
+          division: user.division ?? "",
+          email: user.email ?? "",
+          mobile: user.mobile ?? "",
         });
       }
 
@@ -343,10 +352,19 @@ export function ProfilePage() {
         onSave={async (data) => {
           try {
             if (actor) {
-              await actor.saveCallerUserProfile({
+              await actor.updateProfile({
+                principalId: currentUser.principalId,
                 name: data.name,
                 avatarUrl: currentUser.avatarUrl,
                 rollNumber: data.rollNumber,
+                role: currentUser.role,
+                department: data.department,
+                bio: data.bio,
+                course: data.course,
+                yearOfDegree: data.yearOfDegree,
+                division: data.division,
+                email: currentUser.email ?? "",
+                mobile: currentUser.mobile ?? "",
               });
             }
             setCurrentUser({

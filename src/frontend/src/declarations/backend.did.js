@@ -24,10 +24,19 @@ export const UserRole = IDL.Variant({
   'user' : IDL.Null,
   'guest' : IDL.Null,
 });
-export const UserProfile = IDL.Record({
+export const StudentProfile = IDL.Record({
+  'bio' : IDL.Text,
   'name' : IDL.Text,
+  'role' : IDL.Text,
+  'division' : IDL.Text,
+  'email' : IDL.Text,
+  'yearOfDegree' : IDL.Text,
   'avatarUrl' : IDL.Text,
   'rollNumber' : IDL.Text,
+  'mobile' : IDL.Text,
+  'department' : IDL.Text,
+  'course' : IDL.Text,
+  'principalId' : IDL.Text,
 });
 
 export const idlService = IDL.Service({
@@ -59,15 +68,21 @@ export const idlService = IDL.Service({
   '_caffeineStorageUpdateGatewayPrincipals' : IDL.Func([], [], []),
   '_initializeAccessControlWithSecret' : IDL.Func([IDL.Text], [], []),
   'assignCallerUserRole' : IDL.Func([IDL.Principal, UserRole], [], []),
-  'getCallerUserProfile' : IDL.Func([], [IDL.Opt(UserProfile)], ['query']),
+  'deleteProfile' : IDL.Func([IDL.Text], [], []),
+  'getAllProfiles' : IDL.Func([], [IDL.Vec(StudentProfile)], ['query']),
+  'getAllProfilesPublic' : IDL.Func([], [IDL.Vec(StudentProfile)], ['query']),
+  'getCallerUserProfile' : IDL.Func([], [IDL.Opt(StudentProfile)], ['query']),
   'getCallerUserRole' : IDL.Func([], [UserRole], ['query']),
+  'getMyProfile' : IDL.Func([], [IDL.Opt(StudentProfile)], ['query']),
   'getUserProfile' : IDL.Func(
       [IDL.Principal],
-      [IDL.Opt(UserProfile)],
+      [IDL.Opt(StudentProfile)],
       ['query'],
     ),
   'isCallerAdmin' : IDL.Func([], [IDL.Bool], ['query']),
-  'saveCallerUserProfile' : IDL.Func([UserProfile], [], []),
+  'registerUser' : IDL.Func([StudentProfile], [], []),
+  'saveCallerUserProfile' : IDL.Func([StudentProfile], [], []),
+  'updateProfile' : IDL.Func([StudentProfile], [], []),
 });
 
 export const idlInitArgs = [];
@@ -89,10 +104,19 @@ export const idlFactory = ({ IDL }) => {
     'user' : IDL.Null,
     'guest' : IDL.Null,
   });
-  const UserProfile = IDL.Record({
+  const StudentProfile = IDL.Record({
+    'bio' : IDL.Text,
     'name' : IDL.Text,
+    'role' : IDL.Text,
+    'division' : IDL.Text,
+    'email' : IDL.Text,
+    'yearOfDegree' : IDL.Text,
     'avatarUrl' : IDL.Text,
     'rollNumber' : IDL.Text,
+    'mobile' : IDL.Text,
+    'department' : IDL.Text,
+    'course' : IDL.Text,
+    'principalId' : IDL.Text,
   });
   
   return IDL.Service({
@@ -124,15 +148,21 @@ export const idlFactory = ({ IDL }) => {
     '_caffeineStorageUpdateGatewayPrincipals' : IDL.Func([], [], []),
     '_initializeAccessControlWithSecret' : IDL.Func([IDL.Text], [], []),
     'assignCallerUserRole' : IDL.Func([IDL.Principal, UserRole], [], []),
-    'getCallerUserProfile' : IDL.Func([], [IDL.Opt(UserProfile)], ['query']),
+    'deleteProfile' : IDL.Func([IDL.Text], [], []),
+    'getAllProfiles' : IDL.Func([], [IDL.Vec(StudentProfile)], ['query']),
+    'getAllProfilesPublic' : IDL.Func([], [IDL.Vec(StudentProfile)], ['query']),
+    'getCallerUserProfile' : IDL.Func([], [IDL.Opt(StudentProfile)], ['query']),
     'getCallerUserRole' : IDL.Func([], [UserRole], ['query']),
+    'getMyProfile' : IDL.Func([], [IDL.Opt(StudentProfile)], ['query']),
     'getUserProfile' : IDL.Func(
         [IDL.Principal],
-        [IDL.Opt(UserProfile)],
+        [IDL.Opt(StudentProfile)],
         ['query'],
       ),
     'isCallerAdmin' : IDL.Func([], [IDL.Bool], ['query']),
-    'saveCallerUserProfile' : IDL.Func([UserProfile], [], []),
+    'registerUser' : IDL.Func([StudentProfile], [], []),
+    'saveCallerUserProfile' : IDL.Func([StudentProfile], [], []),
+    'updateProfile' : IDL.Func([StudentProfile], [], []),
   });
 };
 

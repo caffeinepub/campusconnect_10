@@ -7,10 +7,19 @@ export interface None {
     __kind__: "None";
 }
 export type Option<T> = Some<T> | None;
-export interface UserProfile {
+export interface StudentProfile {
+    bio: string;
     name: string;
+    role: string;
+    division: string;
+    email: string;
+    yearOfDegree: string;
     avatarUrl: string;
     rollNumber: string;
+    mobile: string;
+    department: string;
+    course: string;
+    principalId: string;
 }
 export enum UserRole {
     admin = "admin",
@@ -19,9 +28,15 @@ export enum UserRole {
 }
 export interface backendInterface {
     assignCallerUserRole(user: Principal, role: UserRole): Promise<void>;
-    getCallerUserProfile(): Promise<UserProfile | null>;
+    deleteProfile(principalId: string): Promise<void>;
+    getAllProfiles(): Promise<Array<StudentProfile>>;
+    getAllProfilesPublic(): Promise<Array<StudentProfile>>;
+    getCallerUserProfile(): Promise<StudentProfile | null>;
     getCallerUserRole(): Promise<UserRole>;
-    getUserProfile(user: Principal): Promise<UserProfile | null>;
+    getMyProfile(): Promise<StudentProfile | null>;
+    getUserProfile(user: Principal): Promise<StudentProfile | null>;
     isCallerAdmin(): Promise<boolean>;
-    saveCallerUserProfile(profile: UserProfile): Promise<void>;
+    registerUser(profile: StudentProfile): Promise<void>;
+    saveCallerUserProfile(profile: StudentProfile): Promise<void>;
+    updateProfile(profile: StudentProfile): Promise<void>;
 }

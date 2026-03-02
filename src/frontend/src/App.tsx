@@ -7,6 +7,7 @@ import { AppProvider, useApp } from "./context/AppContext";
 import { useActor } from "./hooks/useActor";
 import { useInternetIdentity } from "./hooks/useInternetIdentity";
 import { ActivitiesPage } from "./pages/ActivitiesPage";
+import { AdminPanelPage } from "./pages/AdminPanelPage";
 import { AuthPage } from "./pages/AuthPage";
 import { BarcodeScannerPage } from "./pages/BarcodeScannerPage";
 import { ChatPage } from "./pages/ChatPage";
@@ -72,44 +73,50 @@ function AppContent({ principalId }: { principalId: string }) {
     ensureSeeded();
   }, []);
 
-  // Check/load profile from backend and localStorage
+  // Check/load profile from backend first, then fall back to localStorage
   useEffect(() => {
     if (!actor || isFetching || hasChecked) return;
 
     async function checkProfile() {
       try {
-        // First check localStorage
-        const localProfile = getUserProfile(principalId);
-        if (localProfile) {
-          setCurrentUser(localProfile);
-          setCheckingProfile(false);
-          setHasChecked(true);
-          return;
-        }
-
-        // Check backend
+        // Always try backend first — it's the shared source of truth
         if (actor) {
-          const backendProfile = await actor.getCallerUserProfile();
+          const backendProfile = await actor.getMyProfile();
           if (backendProfile) {
             const profile: LocalUserProfile = {
               name: backendProfile.name,
               avatarUrl: backendProfile.avatarUrl || "",
               rollNumber: backendProfile.rollNumber || "",
-              role: "Student",
-              department: "Unknown",
-              year: "N/A",
-              bio: "",
-              principalId,
-              course: "",
-              yearOfDegree: "",
-              division: "",
+              role:
+                (backendProfile.role as LocalUserProfile["role"]) || "Student",
+              department: backendProfile.department || "",
+              year: backendProfile.yearOfDegree || "",
+              bio: backendProfile.bio || "",
+              principalId: backendProfile.principalId || principalId,
+              course: backendProfile.course || "",
+              yearOfDegree: backendProfile.yearOfDegree || "",
+              division: backendProfile.division || "",
+              email: backendProfile.email || "",
+              mobile: backendProfile.mobile || "",
             };
             saveUserProfile(profile);
             setCurrentUser(profile);
+            return;
           }
         }
+
+        // Fall back to localStorage if backend call returned nothing
+        const localProfile = getUserProfile(principalId);
+        if (localProfile) {
+          setCurrentUser(localProfile);
+        }
+        // If neither has a profile, currentUser stays null → ProfileSetupPage is shown
       } catch {
-        // Silently fail - user will go through setup
+        // Backend call failed — fall back to localStorage
+        const localProfile = getUserProfile(principalId);
+        if (localProfile) {
+          setCurrentUser(localProfile);
+        }
       } finally {
         setCheckingProfile(false);
         setHasChecked(true);
@@ -207,6 +214,8 @@ function PageContent({ activeTab }: { activeTab: string }) {
       return <FriendRequestsPage />;
     case "settings":
       return <SettingsPage />;
+    case "admin":
+      return <AdminPanelPage />;
     default:
       return <DashboardPage />;
   }

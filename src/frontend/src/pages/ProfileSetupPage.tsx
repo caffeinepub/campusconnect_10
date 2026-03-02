@@ -145,27 +145,38 @@ export function ProfileSetupPage({ onComplete }: ProfileSetupPageProps) {
     try {
       const avatarUrl = photoDataUrl;
 
-      if (actor) {
-        await actor.saveCallerUserProfile({
-          name: form.name,
-          avatarUrl,
-          rollNumber: form.rollNumber,
-        });
-      }
-
       const profile: LocalUserProfile = {
         name: form.name,
         avatarUrl,
         rollNumber: form.rollNumber,
         role: form.role as UserRole,
         department: form.department,
-        year: form.year || "N/A",
+        year: form.year || "",
         bio: form.bio,
         principalId,
         course: form.course,
         yearOfDegree: form.yearOfDegree,
         division: form.division,
+        email: "",
+        mobile: "",
       };
+
+      if (actor) {
+        await actor.registerUser({
+          principalId,
+          name: form.name,
+          avatarUrl,
+          rollNumber: form.rollNumber,
+          role: form.role as string,
+          department: form.department,
+          bio: form.bio,
+          course: form.course,
+          yearOfDegree: form.yearOfDegree,
+          division: form.division,
+          email: "",
+          mobile: "",
+        });
+      }
 
       onComplete(profile);
       toast.success("Profile created! Welcome to campusX 🎉");

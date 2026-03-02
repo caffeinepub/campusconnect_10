@@ -11,6 +11,7 @@ import {
   MessageCircle,
   QrCode,
   Settings,
+  Shield,
   User,
   UserPlus,
   Users,
@@ -103,6 +104,22 @@ export function Sidebar({ mobileOpen, onMobileClose }: SidebarProps) {
             </button>
           );
         })}
+
+        {/* Admin Panel — only visible to admins */}
+        {currentUser?.role === "Admin" && (
+          <button
+            type="button"
+            onClick={() => handleNav("admin")}
+            className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-150 text-left ${
+              activeTab === "admin"
+                ? "bg-sidebar-primary text-sidebar-primary-foreground shadow-sm"
+                : "text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-foreground"
+            }`}
+          >
+            <Shield className="flex-shrink-0" size={17} />
+            Admin Panel
+          </button>
+        )}
       </nav>
 
       {/* User card at bottom */}
