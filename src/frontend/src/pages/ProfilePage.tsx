@@ -112,7 +112,7 @@ export function ProfilePage() {
       const avatarUrl = await resizeImageToDataUrl(file, 256);
 
       if (actor) {
-        await actor.updateProfile({
+        await actor.saveCallerUserProfile({
           principalId: user.principalId,
           name: user.name,
           avatarUrl,
@@ -352,7 +352,7 @@ export function ProfilePage() {
         onSave={async (data) => {
           try {
             if (actor) {
-              await actor.updateProfile({
+              await actor.saveCallerUserProfile({
                 principalId: currentUser.principalId,
                 name: data.name,
                 avatarUrl: currentUser.avatarUrl,

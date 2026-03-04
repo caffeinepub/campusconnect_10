@@ -89,6 +89,23 @@ export class ExternalBlob {
         return this;
     }
 }
+export interface BackendFriendRequest {
+    id: string;
+    status: string;
+    fromAvatar: string;
+    toId: string;
+    timestamp: bigint;
+    fromName: string;
+    fromId: string;
+}
+export interface BackendComment {
+    id: string;
+    content: string;
+    authorAvatar: string;
+    authorId: string;
+    authorName: string;
+    timestamp: bigint;
+}
 export interface StudentProfile {
     bio: string;
     name: string;
@@ -103,16 +120,75 @@ export interface StudentProfile {
     course: string;
     principalId: string;
 }
+export interface BackendActivity {
+    id: string;
+    organizer: string;
+    date: string;
+    name: string;
+    time: string;
+    description: string;
+    timestamp: bigint;
+    category: string;
+    registrations: bigint;
+    location: string;
+}
+export interface BackendPost {
+    id: string;
+    content: string;
+    authorAvatar: string;
+    authorId: string;
+    authorDivision: string;
+    authorName: string;
+    authorRole: string;
+    likes: Array<string>;
+    imageUrl: string;
+    timestamp: bigint;
+    comments: Array<BackendComment>;
+    videoUrl: string;
+    authorCourse: string;
+}
+export interface BackendPollOption {
+    id: string;
+    votes: bigint;
+    text: string;
+}
+export interface _CaffeineStorageRefillInformation {
+    proposed_top_up_amount?: bigint;
+}
+export interface BackendPoll {
+    id: string;
+    active: boolean;
+    question: string;
+    authorId: string;
+    authorName: string;
+    deadline: string;
+    timestamp: bigint;
+    options: Array<BackendPollOption>;
+}
 export interface _CaffeineStorageCreateCertificateResult {
     method: string;
     blob_hash: string;
 }
+export interface BackendNotice {
+    id: string;
+    title: string;
+    content: string;
+    authorName: string;
+    authorRole: string;
+    timestamp: bigint;
+    priority: string;
+    department: string;
+}
+export interface BackendChatMessage {
+    id: string;
+    content: string;
+    receiverId: string;
+    timestamp: bigint;
+    senderId: string;
+}
 export interface _CaffeineStorageRefillResult {
     success?: boolean;
     topped_up_amount?: bigint;
-}
-export interface _CaffeineStorageRefillInformation {
-    proposed_top_up_amount?: bigint;
 }
 export enum UserRole {
     admin = "admin",
@@ -127,18 +203,37 @@ export interface backendInterface {
     _caffeineStorageRefillCashier(refillInformation: _CaffeineStorageRefillInformation | null): Promise<_CaffeineStorageRefillResult>;
     _caffeineStorageUpdateGatewayPrincipals(): Promise<void>;
     _initializeAccessControlWithSecret(userSecret: string): Promise<void>;
+    addComment(postId: string, comment: BackendComment): Promise<void>;
     assignCallerUserRole(user: Principal, role: UserRole): Promise<void>;
+    createActivity(activity: BackendActivity): Promise<void>;
+    createNotice(notice: BackendNotice): Promise<void>;
+    createPoll(poll: BackendPoll): Promise<void>;
+    createPost(post: BackendPost): Promise<void>;
+    deleteMyAccount(): Promise<void>;
+    deletePost(postId: string): Promise<void>;
     deleteProfile(principalId: string): Promise<void>;
+    getAllActivities(): Promise<Array<BackendActivity>>;
+    getAllNotices(): Promise<Array<BackendNotice>>;
+    getAllPolls(): Promise<Array<BackendPoll>>;
+    getAllPosts(): Promise<Array<BackendPost>>;
     getAllProfiles(): Promise<Array<StudentProfile>>;
     getAllProfilesPublic(): Promise<Array<StudentProfile>>;
     getCallerUserProfile(): Promise<StudentProfile | null>;
     getCallerUserRole(): Promise<UserRole>;
+    getChatMessagesWith(partnerId: string): Promise<Array<BackendChatMessage>>;
+    getFriendRequests(): Promise<Array<BackendFriendRequest>>;
+    getMyPollVote(pollId: string): Promise<string | null>;
     getMyProfile(): Promise<StudentProfile | null>;
     getUserProfile(user: Principal): Promise<StudentProfile | null>;
     isCallerAdmin(): Promise<boolean>;
-    registerUser(profile: StudentProfile): Promise<void>;
+    likePost(postId: string): Promise<void>;
+    registerOrUpdateUser(profile: StudentProfile): Promise<void>;
+    respondToFriendRequest(requestId: string, accept: boolean): Promise<void>;
     saveCallerUserProfile(profile: StudentProfile): Promise<void>;
-    updateProfile(profile: StudentProfile): Promise<void>;
+    sendChatMessage(msg: BackendChatMessage): Promise<void>;
+    sendFriendRequest(req: BackendFriendRequest): Promise<void>;
+    setUserRole(target: Principal, role: UserRole): Promise<void>;
+    votePoll(pollId: string, optionId: string): Promise<void>;
 }
 import type { StudentProfile as _StudentProfile, UserRole as _UserRole, _CaffeineStorageRefillInformation as __CaffeineStorageRefillInformation, _CaffeineStorageRefillResult as __CaffeineStorageRefillResult } from "./declarations/backend.did.d.ts";
 export class Backend implements backendInterface {
@@ -241,6 +336,20 @@ export class Backend implements backendInterface {
             return result;
         }
     }
+    async addComment(arg0: string, arg1: BackendComment): Promise<void> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.addComment(arg0, arg1);
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.addComment(arg0, arg1);
+            return result;
+        }
+    }
     async assignCallerUserRole(arg0: Principal, arg1: UserRole): Promise<void> {
         if (this.processError) {
             try {
@@ -255,6 +364,90 @@ export class Backend implements backendInterface {
             return result;
         }
     }
+    async createActivity(arg0: BackendActivity): Promise<void> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.createActivity(arg0);
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.createActivity(arg0);
+            return result;
+        }
+    }
+    async createNotice(arg0: BackendNotice): Promise<void> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.createNotice(arg0);
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.createNotice(arg0);
+            return result;
+        }
+    }
+    async createPoll(arg0: BackendPoll): Promise<void> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.createPoll(arg0);
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.createPoll(arg0);
+            return result;
+        }
+    }
+    async createPost(arg0: BackendPost): Promise<void> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.createPost(arg0);
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.createPost(arg0);
+            return result;
+        }
+    }
+    async deleteMyAccount(): Promise<void> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.deleteMyAccount();
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.deleteMyAccount();
+            return result;
+        }
+    }
+    async deletePost(arg0: string): Promise<void> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.deletePost(arg0);
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.deletePost(arg0);
+            return result;
+        }
+    }
     async deleteProfile(arg0: string): Promise<void> {
         if (this.processError) {
             try {
@@ -266,6 +459,62 @@ export class Backend implements backendInterface {
             }
         } else {
             const result = await this.actor.deleteProfile(arg0);
+            return result;
+        }
+    }
+    async getAllActivities(): Promise<Array<BackendActivity>> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.getAllActivities();
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.getAllActivities();
+            return result;
+        }
+    }
+    async getAllNotices(): Promise<Array<BackendNotice>> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.getAllNotices();
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.getAllNotices();
+            return result;
+        }
+    }
+    async getAllPolls(): Promise<Array<BackendPoll>> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.getAllPolls();
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.getAllPolls();
+            return result;
+        }
+    }
+    async getAllPosts(): Promise<Array<BackendPost>> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.getAllPosts();
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.getAllPosts();
             return result;
         }
     }
@@ -325,6 +574,48 @@ export class Backend implements backendInterface {
             return from_candid_UserRole_n11(this._uploadFile, this._downloadFile, result);
         }
     }
+    async getChatMessagesWith(arg0: string): Promise<Array<BackendChatMessage>> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.getChatMessagesWith(arg0);
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.getChatMessagesWith(arg0);
+            return result;
+        }
+    }
+    async getFriendRequests(): Promise<Array<BackendFriendRequest>> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.getFriendRequests();
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.getFriendRequests();
+            return result;
+        }
+    }
+    async getMyPollVote(arg0: string): Promise<string | null> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.getMyPollVote(arg0);
+                return from_candid_opt_n13(this._uploadFile, this._downloadFile, result);
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.getMyPollVote(arg0);
+            return from_candid_opt_n13(this._uploadFile, this._downloadFile, result);
+        }
+    }
     async getMyProfile(): Promise<StudentProfile | null> {
         if (this.processError) {
             try {
@@ -367,17 +658,45 @@ export class Backend implements backendInterface {
             return result;
         }
     }
-    async registerUser(arg0: StudentProfile): Promise<void> {
+    async likePost(arg0: string): Promise<void> {
         if (this.processError) {
             try {
-                const result = await this.actor.registerUser(arg0);
+                const result = await this.actor.likePost(arg0);
                 return result;
             } catch (e) {
                 this.processError(e);
                 throw new Error("unreachable");
             }
         } else {
-            const result = await this.actor.registerUser(arg0);
+            const result = await this.actor.likePost(arg0);
+            return result;
+        }
+    }
+    async registerOrUpdateUser(arg0: StudentProfile): Promise<void> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.registerOrUpdateUser(arg0);
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.registerOrUpdateUser(arg0);
+            return result;
+        }
+    }
+    async respondToFriendRequest(arg0: string, arg1: boolean): Promise<void> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.respondToFriendRequest(arg0, arg1);
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.respondToFriendRequest(arg0, arg1);
             return result;
         }
     }
@@ -395,17 +714,59 @@ export class Backend implements backendInterface {
             return result;
         }
     }
-    async updateProfile(arg0: StudentProfile): Promise<void> {
+    async sendChatMessage(arg0: BackendChatMessage): Promise<void> {
         if (this.processError) {
             try {
-                const result = await this.actor.updateProfile(arg0);
+                const result = await this.actor.sendChatMessage(arg0);
                 return result;
             } catch (e) {
                 this.processError(e);
                 throw new Error("unreachable");
             }
         } else {
-            const result = await this.actor.updateProfile(arg0);
+            const result = await this.actor.sendChatMessage(arg0);
+            return result;
+        }
+    }
+    async sendFriendRequest(arg0: BackendFriendRequest): Promise<void> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.sendFriendRequest(arg0);
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.sendFriendRequest(arg0);
+            return result;
+        }
+    }
+    async setUserRole(arg0: Principal, arg1: UserRole): Promise<void> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.setUserRole(arg0, to_candid_UserRole_n8(this._uploadFile, this._downloadFile, arg1));
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.setUserRole(arg0, to_candid_UserRole_n8(this._uploadFile, this._downloadFile, arg1));
+            return result;
+        }
+    }
+    async votePoll(arg0: string, arg1: string): Promise<void> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.votePoll(arg0, arg1);
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.votePoll(arg0, arg1);
             return result;
         }
     }
@@ -417,6 +778,9 @@ function from_candid__CaffeineStorageRefillResult_n4(_uploadFile: (file: Externa
     return from_candid_record_n5(_uploadFile, _downloadFile, value);
 }
 function from_candid_opt_n10(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: [] | [_StudentProfile]): StudentProfile | null {
+    return value.length === 0 ? null : value[0];
+}
+function from_candid_opt_n13(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: [] | [string]): string | null {
     return value.length === 0 ? null : value[0];
 }
 function from_candid_opt_n6(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: [] | [boolean]): boolean | null {

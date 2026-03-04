@@ -1,10 +1,22 @@
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { Switch } from "@/components/ui/switch";
+import { Principal } from "@icp-sdk/core/principal";
 import {
+  AlertTriangle,
   Database,
   Download,
   Eye,
@@ -16,13 +28,16 @@ import {
   Palette,
   Shield,
   Sun,
+  Trash2,
   User,
   UserCircle,
 } from "lucide-react";
 import { motion } from "motion/react";
 import { useState } from "react";
 import { toast } from "sonner";
+import { UserRole as BackendUserRole } from "../backend";
 import { useApp } from "../context/AppContext";
+import { useActor } from "../hooks/useActor";
 import type { LocalUserProfile } from "../types/campus";
 import { getAllUserProfiles, saveUserProfile } from "../utils/storage";
 
@@ -86,12 +101,21 @@ export function SettingsPage() {
         <DataPrivacySection currentUser={currentUser} />
       </motion.div>
 
+      {/* Danger Zone — Delete Account */}
+      <motion.div
+        initial={{ opacity: 0, y: 12 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.35, delay: 0.25 }}
+      >
+        <DangerZoneSection />
+      </motion.div>
+
       {/* Admin Bootstrap — visible to non-admins so they can promote themselves */}
       {currentUser.role !== "Admin" && (
         <motion.div
           initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.35, delay: 0.25 }}
+          transition={{ duration: 0.35, delay: 0.3 }}
         >
           <BecomeAdminSection
             currentUser={currentUser}
@@ -105,7 +129,7 @@ export function SettingsPage() {
         <motion.div
           initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.35, delay: 0.25 }}
+          transition={{ duration: 0.35, delay: 0.3 }}
         >
           <AdminSection />
         </motion.div>
@@ -515,6 +539,129 @@ function DataPrivacySection({
   );
 }
 
+// ─── Danger Zone Section ──────────────────────────────────────────────────────
+
+function DangerZoneSection() {
+  const { deleteMyAccount } = useApp();
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [confirmText, setConfirmText] = useState("");
+  const [deleting, setDeleting] = useState(false);
+
+  const canConfirm = confirmText === "DELETE";
+
+  async function handleDeleteAccount() {
+    if (!canConfirm) return;
+    setDeleting(true);
+    try {
+      await deleteMyAccount();
+      // Clear all localStorage data
+      localStorage.clear();
+      // Reload to force re-authentication
+      window.location.reload();
+    } catch {
+      toast.error("Failed to delete account. Please try again.");
+      setDeleting(false);
+    }
+  }
+
+  return (
+    <>
+      <Card className="rounded-2xl border-destructive/40 shadow-card bg-destructive/5">
+        <CardHeader className="pb-3">
+          <CardTitle className="flex items-center gap-2 font-display text-base font-semibold text-destructive">
+            <AlertTriangle className="w-4 h-4" />
+            Danger Zone
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <p className="text-sm text-muted-foreground">
+            Permanently delete your account and all associated data. This action
+            cannot be undone.
+          </p>
+          <Button
+            variant="destructive"
+            size="sm"
+            onClick={() => setDialogOpen(true)}
+            data-ocid="settings.delete_button"
+            className="rounded-xl gap-2"
+          >
+            <Trash2 className="w-4 h-4" />
+            Delete Account Permanently
+          </Button>
+        </CardContent>
+      </Card>
+
+      <AlertDialog open={dialogOpen} onOpenChange={setDialogOpen}>
+        <AlertDialogContent
+          className="rounded-2xl max-w-md"
+          data-ocid="settings.dialog"
+        >
+          <AlertDialogHeader>
+            <AlertDialogTitle className="font-display text-lg font-bold text-destructive flex items-center gap-2">
+              <AlertTriangle className="w-5 h-5" />
+              Delete Account Permanently
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-sm text-muted-foreground leading-relaxed">
+              This will permanently delete your profile, friend requests, and
+              all personal data. This action <strong>cannot be undone</strong>.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+
+          <div className="py-2 space-y-2">
+            <Label
+              htmlFor="delete-confirm-input"
+              className="text-sm font-medium text-foreground"
+            >
+              Type <span className="font-bold text-destructive">DELETE</span> to
+              confirm:
+            </Label>
+            <Input
+              id="delete-confirm-input"
+              value={confirmText}
+              onChange={(e) => setConfirmText(e.target.value)}
+              placeholder="DELETE"
+              className="rounded-xl border-destructive/40 focus-visible:ring-destructive/40"
+              data-ocid="settings.input"
+              autoComplete="off"
+            />
+          </div>
+
+          <AlertDialogFooter>
+            <AlertDialogCancel
+              onClick={() => {
+                setConfirmText("");
+                setDialogOpen(false);
+              }}
+              className="rounded-xl"
+              data-ocid="settings.cancel_button"
+            >
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteAccount}
+              disabled={!canConfirm || deleting}
+              data-ocid="settings.confirm_button"
+              className="rounded-xl bg-destructive hover:bg-destructive/90 text-destructive-foreground disabled:opacity-50"
+            >
+              {deleting ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Deleting...
+                </>
+              ) : (
+                <>
+                  <Trash2 className="w-4 h-4 mr-2" />
+                  Delete Account
+                </>
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
+  );
+}
+
 // ─── Become Admin Section ─────────────────────────────────────────────────────
 
 function BecomeAdminSection({
@@ -524,17 +671,35 @@ function BecomeAdminSection({
   currentUser: LocalUserProfile;
   onPromoted: (updated: LocalUserProfile) => void;
 }) {
+  const { actor } = useActor();
   const [promoting, setPromoting] = useState(false);
 
-  function handleBecomeAdmin() {
+  async function handleBecomeAdmin() {
     setPromoting(true);
-    setTimeout(() => {
+    try {
       const updated: LocalUserProfile = { ...currentUser, role: "Admin" };
+      // Persist to localStorage first
       saveUserProfile(updated);
+
+      // Persist to backend
+      if (actor && currentUser.principalId) {
+        try {
+          await actor.setUserRole(
+            Principal.fromText(currentUser.principalId),
+            BackendUserRole.admin,
+          );
+        } catch {
+          // Non-fatal: backend may reject if not authorized; local state still updated
+        }
+      }
+
       onPromoted(updated);
-      toast.success("You are now an Admin! Refresh the page if needed.");
+      toast.success(
+        "You are now an Admin! Admin Panel is now visible in the sidebar.",
+      );
+    } finally {
       setPromoting(false);
-    }, 400);
+    }
   }
 
   return (
@@ -555,6 +720,7 @@ function BecomeAdminSection({
           size="sm"
           onClick={handleBecomeAdmin}
           disabled={promoting}
+          data-ocid="settings.primary_button"
           className="rounded-xl gap-2 border-amber-400/60 text-amber-700 hover:bg-amber-50 dark:text-amber-400 dark:hover:bg-amber-950/30"
         >
           {promoting ? (

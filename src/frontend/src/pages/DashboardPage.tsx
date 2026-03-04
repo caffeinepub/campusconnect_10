@@ -22,8 +22,8 @@ import { useMemo, useState } from "react";
 import { RoleBadge } from "../components/RoleBadge";
 import { UserAvatar } from "../components/UserAvatar";
 import { useApp } from "../context/AppContext";
-import { formatDate, formatTimeAgo } from "../utils/helpers";
-import { getAllUserProfiles } from "../utils/storage";
+import { useBackendProfiles } from "../hooks/useBackendProfiles";
+import { formatTimeAgo } from "../utils/helpers";
 
 export function DashboardPage() {
   const {
@@ -37,8 +37,7 @@ export function DashboardPage() {
   } = useApp();
 
   const [searchQuery, setSearchQuery] = useState("");
-
-  const allProfiles = useMemo(() => getAllUserProfiles(), []);
+  const { profiles: allProfiles } = useBackendProfiles();
 
   const searchResults = useMemo(() => {
     if (!searchQuery.trim()) return [];
@@ -69,12 +68,12 @@ export function DashboardPage() {
 
   const stats = [
     {
-      label: "Posts",
-      value: posts.length,
-      icon: TrendingUp,
+      label: "Students",
+      value: allProfiles.length,
+      icon: Users,
       color: "text-primary",
       bg: "bg-primary/10",
-      tab: "feed",
+      tab: "directory",
     },
     {
       label: "Notices",

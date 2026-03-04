@@ -2,39 +2,55 @@
 
 ## Current State
 
-The app stores all student profile data (name, email, mobile, course, year, division, rollNumber, role, avatarUrl, bio, department) in browser **localStorage** only. Each browser has its own isolated localStorage, so Student A (Browser 1) and Student B (Browser 2) cannot see each other in the Admin Panel or Student Directory. The Motoko backend only stores a minimal `UserProfile` with `name`, `avatarUrl`, and `rollNumber` -- it is not used as the source of truth for profiles.
+Full-stack campus social app with:
+- Student profiles, login, friend requests, chat (backend-synced)
+- Posts/feed (backend-synced via createPost/getAllPosts)
+- Polls, Notices, Activities (localStorage only — NOT backend-synced)
+- Admin Panel with role toggle (calls `assignCallerUserRole` but passing wrong args)
+- Settings page with "Make me Admin" button (localStorage only, not backend-synced)
+- No account deletion feature
 
 ## Requested Changes (Diff)
 
 ### Add
-- Full student profile stored in Motoko backend stable storage (email, mobile, name, course, yearOfDegree, division, rollNumber, department, bio, avatarUrl, role)
-- Backend query: `getAllProfiles()` -- returns all registered profiles (admin only)
-- Backend query: `getAllProfilesPublic()` -- returns all profiles for directory (any authenticated user)
-- Backend mutation: `registerUser(profile)` -- saves a full profile for the caller
-- Backend mutation: `updateProfile(profile)` -- updates caller's own profile
-- Backend query: `getMyProfile()` -- returns the caller's own profile
-- Frontend: on signup/profile setup, write to backend canister (not just localStorage)
-- Frontend: on profile update, write to backend canister
-- Frontend: Student Directory reads from backend canister (`getAllProfilesPublic`)
-- Frontend: Admin Panel reads from backend canister (`getAllProfiles`)
-- Frontend: On app load, fetch caller's profile from backend and sync to local state
+- Backend storage for Polls (create, get all, vote)
+- Backend storage for Notices (create, get all)
+- Backend storage for Activities (create, get all)
+- Account deletion: user can permanently delete their own account from Settings (with confirmation dialog), removes profile + friend requests from backend; frontend logs out
+- Admin can delete any user account from Admin Panel
+- Proper role assignment: admin promotes/demotes user via backend `assignCallerUserRole` correctly by passing target user's Principal
 
 ### Modify
-- `saveUserProfile` in storage.ts: also writes to backend canister
-- `getAllUserProfiles` in storage.ts: reads from backend canister (with localStorage fallback for offline)
-- AppContext: on init, calls `getMyProfile()` from backend to hydrate `currentUser`
-- DirectoryPage: fetches profiles from backend on mount
-- AdminPanelPage: fetches profiles from backend on mount
+- AppContext: load polls, notices, activities from backend on mount (poll every 30s), write to backend on create
+- AdminPanelPage: fix `handleToggleRole` — the current code calls `assignCallerUserRole(principal, role)` but the backend function signature may differ; ensure admin-only role changes persist across browsers
+- SettingsPage: "Make me Admin" should also call backend to persist the role change (not only localStorage)
+- PollsPage: `addPoll` must call backend; votes must persist to backend
+- NoticesPage: `addNotice` must call backend
+- ActivitiesPage: `addActivity` must call backend
 
 ### Remove
-- Dependency on localStorage as the primary source of truth for profiles across users
+- Nothing removed
 
 ## Implementation Plan
 
-1. Regenerate Motoko backend with full `StudentProfile` type including all profile fields, `registerUser`, `updateProfile`, `getMyProfile`, `getAllProfilesPublic`, `getAllProfiles` (admin-gated) endpoints
-2. Update `backend.d.ts` bindings to match
-3. Update `AppContext` to call `getMyProfile()` on init and use backend as source of truth
-4. Update `ProfileSetupPage` and profile save logic to call `registerUser`/`updateProfile` on the backend
-5. Update `DirectoryPage` to call `getAllProfilesPublic()` on mount and show real results
-6. Update `AdminPanelPage` to call `getAllProfiles()` on mount
-7. Keep localStorage as a fast local cache for the current user's own profile (for instant UI on reload), but always treat the backend as the source of truth for multi-user data
+1. **Backend (main.mo)**: Add Motoko types and CRUD for:
+   - `BackendNotice` with id, title, content, authorName, authorRole, priority, department, timestamp
+   - `BackendActivity` with id, name, description, date, time, organizer, category, location, registrations
+   - `BackendPoll` with id, question, options (id+text+votes), authorId, authorName, deadline, active, timestamp
+   - `BackendPollVote` map (pollId+principalId → optionId)
+   - Account deletion: `deleteMyAccount()` — removes own profile and friend requests; admin `deleteProfile` already exists
+   - Expose: createNotice, getAllNotices, createActivity, getAllActivities, createPoll, getAllPolls, votePoll (idempotent), deleteMyAccount
+
+2. **AppContext**: 
+   - Add backend-fetch for notices, activities, polls on actor ready (interval 30s)
+   - Replace `addNotice`/`addActivity`/`addPoll` to write to backend, then refresh
+   - `votePoll` to call backend votePoll then refresh
+   - Add `deleteMyAccount` action that calls backend and logs out
+
+3. **SettingsPage**: 
+   - "Make me Admin" also calls `assignCallerUserRole(myPrincipal, admin)` 
+   - Add "Delete Account Permanently" section with confirm dialog
+   
+4. **AdminPanelPage**: Fix role toggle — the function is called `assignCallerUserRole` which only lets the CALLER set their OWN role. Since admin needs to set another user's role, a new backend function `setUserRole(target: Principal, role: UserRole)` (admin-only) is needed.
+
+5. **PollsPage / NoticesPage / ActivitiesPage**: Wire to backend context actions.

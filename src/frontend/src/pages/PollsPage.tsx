@@ -139,9 +139,12 @@ function PollCard({
   poll,
   readOnly = false,
 }: { poll: Poll; readOnly?: boolean }) {
-  const { currentUser, votePoll, hasVotedPoll } = useApp();
+  const { currentUser, votePoll, hasVotedPoll, backendVotes } = useApp();
   const principalId = currentUser?.principalId ?? "";
-  const votedOptionId = principalId ? hasVotedPoll(poll.id, principalId) : null;
+  // Check backend votes first (cross-browser), then local storage fallback
+  const votedOptionId =
+    backendVotes[poll.id] ??
+    (principalId ? hasVotedPoll(poll.id, principalId) : null);
   const hasVoted = !!votedOptionId;
   const totalVotes = poll.options.reduce((acc, opt) => acc + opt.votes, 0);
   const deadlineStr = formatDeadline(poll.deadline);

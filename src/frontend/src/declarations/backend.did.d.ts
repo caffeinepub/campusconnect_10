@@ -10,6 +10,82 @@ import type { ActorMethod } from '@icp-sdk/core/agent';
 import type { IDL } from '@icp-sdk/core/candid';
 import type { Principal } from '@icp-sdk/core/principal';
 
+export interface BackendActivity {
+  'id' : string,
+  'organizer' : string,
+  'date' : string,
+  'name' : string,
+  'time' : string,
+  'description' : string,
+  'timestamp' : bigint,
+  'category' : string,
+  'registrations' : bigint,
+  'location' : string,
+}
+export interface BackendChatMessage {
+  'id' : string,
+  'content' : string,
+  'receiverId' : string,
+  'timestamp' : bigint,
+  'senderId' : string,
+}
+export interface BackendComment {
+  'id' : string,
+  'content' : string,
+  'authorAvatar' : string,
+  'authorId' : string,
+  'authorName' : string,
+  'timestamp' : bigint,
+}
+export interface BackendFriendRequest {
+  'id' : string,
+  'status' : string,
+  'fromAvatar' : string,
+  'toId' : string,
+  'timestamp' : bigint,
+  'fromName' : string,
+  'fromId' : string,
+}
+export interface BackendNotice {
+  'id' : string,
+  'title' : string,
+  'content' : string,
+  'authorName' : string,
+  'authorRole' : string,
+  'timestamp' : bigint,
+  'priority' : string,
+  'department' : string,
+}
+export interface BackendPoll {
+  'id' : string,
+  'active' : boolean,
+  'question' : string,
+  'authorId' : string,
+  'authorName' : string,
+  'deadline' : string,
+  'timestamp' : bigint,
+  'options' : Array<BackendPollOption>,
+}
+export interface BackendPollOption {
+  'id' : string,
+  'votes' : bigint,
+  'text' : string,
+}
+export interface BackendPost {
+  'id' : string,
+  'content' : string,
+  'authorAvatar' : string,
+  'authorId' : string,
+  'authorDivision' : string,
+  'authorName' : string,
+  'authorRole' : string,
+  'likes' : Array<string>,
+  'imageUrl' : string,
+  'timestamp' : bigint,
+  'comments' : Array<BackendComment>,
+  'videoUrl' : string,
+  'authorCourse' : string,
+}
 export interface StudentProfile {
   'bio' : string,
   'name' : string,
@@ -55,18 +131,37 @@ export interface _SERVICE {
   >,
   '_caffeineStorageUpdateGatewayPrincipals' : ActorMethod<[], undefined>,
   '_initializeAccessControlWithSecret' : ActorMethod<[string], undefined>,
+  'addComment' : ActorMethod<[string, BackendComment], undefined>,
   'assignCallerUserRole' : ActorMethod<[Principal, UserRole], undefined>,
+  'createActivity' : ActorMethod<[BackendActivity], undefined>,
+  'createNotice' : ActorMethod<[BackendNotice], undefined>,
+  'createPoll' : ActorMethod<[BackendPoll], undefined>,
+  'createPost' : ActorMethod<[BackendPost], undefined>,
+  'deleteMyAccount' : ActorMethod<[], undefined>,
+  'deletePost' : ActorMethod<[string], undefined>,
   'deleteProfile' : ActorMethod<[string], undefined>,
+  'getAllActivities' : ActorMethod<[], Array<BackendActivity>>,
+  'getAllNotices' : ActorMethod<[], Array<BackendNotice>>,
+  'getAllPolls' : ActorMethod<[], Array<BackendPoll>>,
+  'getAllPosts' : ActorMethod<[], Array<BackendPost>>,
   'getAllProfiles' : ActorMethod<[], Array<StudentProfile>>,
   'getAllProfilesPublic' : ActorMethod<[], Array<StudentProfile>>,
   'getCallerUserProfile' : ActorMethod<[], [] | [StudentProfile]>,
   'getCallerUserRole' : ActorMethod<[], UserRole>,
+  'getChatMessagesWith' : ActorMethod<[string], Array<BackendChatMessage>>,
+  'getFriendRequests' : ActorMethod<[], Array<BackendFriendRequest>>,
+  'getMyPollVote' : ActorMethod<[string], [] | [string]>,
   'getMyProfile' : ActorMethod<[], [] | [StudentProfile]>,
   'getUserProfile' : ActorMethod<[Principal], [] | [StudentProfile]>,
   'isCallerAdmin' : ActorMethod<[], boolean>,
-  'registerUser' : ActorMethod<[StudentProfile], undefined>,
+  'likePost' : ActorMethod<[string], undefined>,
+  'registerOrUpdateUser' : ActorMethod<[StudentProfile], undefined>,
+  'respondToFriendRequest' : ActorMethod<[string, boolean], undefined>,
   'saveCallerUserProfile' : ActorMethod<[StudentProfile], undefined>,
-  'updateProfile' : ActorMethod<[StudentProfile], undefined>,
+  'sendChatMessage' : ActorMethod<[BackendChatMessage], undefined>,
+  'sendFriendRequest' : ActorMethod<[BackendFriendRequest], undefined>,
+  'setUserRole' : ActorMethod<[Principal, UserRole], undefined>,
+  'votePoll' : ActorMethod<[string, string], undefined>,
 }
 export declare const idlService: IDL.ServiceClass;
 export declare const idlInitArgs: IDL.Type[];

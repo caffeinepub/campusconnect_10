@@ -4,7 +4,7 @@ import { useRef, useState } from "react";
 import { RoleBadge } from "../components/RoleBadge";
 import { UserAvatar } from "../components/UserAvatar";
 import { useApp } from "../context/AppContext";
-import { getAllUserProfiles } from "../utils/storage";
+import { useBackendProfiles } from "../hooks/useBackendProfiles";
 
 interface TopBarProps {
   onMobileMenuOpen: () => void;
@@ -30,7 +30,7 @@ export function TopBar({ onMobileMenuOpen }: TopBarProps) {
   const [showResults, setShowResults] = useState(false);
   const searchRef = useRef<HTMLDivElement>(null);
 
-  const allProfiles = getAllUserProfiles();
+  const { profiles: allProfiles } = useBackendProfiles();
 
   const searchResults =
     searchQuery.trim().length > 0

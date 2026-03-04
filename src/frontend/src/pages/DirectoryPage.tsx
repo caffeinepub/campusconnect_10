@@ -23,26 +23,30 @@ import {
   X,
 } from "lucide-react";
 import { motion } from "motion/react";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { toast } from "sonner";
+import type { BackendFriendRequest } from "../backend.d";
 import { RoleBadge } from "../components/RoleBadge";
 import { UserAvatar } from "../components/UserAvatar";
 import { useApp } from "../context/AppContext";
 import { useActor } from "../hooks/useActor";
-import type { LocalUserProfile, Post, UserRole } from "../types/campus";
-import { formatTimeAgo } from "../utils/helpers";
+import type {
+  FriendRequest,
+  LocalUserProfile,
+  Post,
+  UserRole,
+} from "../types/campus";
+import { formatTimeAgo, generateId } from "../utils/helpers";
 import { getAllUserProfiles } from "../utils/storage";
 
+type FriendshipStatus =
+  | "none"
+  | "pending_sent"
+  | "pending_received"
+  | "friends";
+
 export function DirectoryPage() {
-  const {
-    currentUser,
-    setActiveTab,
-    setActiveChatUser,
-    posts,
-    sendFriendRequest,
-    acceptFriendRequest,
-    getFriendshipStatus,
-    friendRequests,
-  } = useApp();
+  const { currentUser, setActiveTab, setActiveChatUser, posts } = useApp();
   const { actor, isFetching: actorFetching } = useActor();
   const [query, setQuery] = useState("");
   const [courseFilter, setCourseFilter] = useState("all");
@@ -55,41 +59,66 @@ export function DirectoryPage() {
     [],
   );
   const [loadingProfiles, setLoadingProfiles] = useState(true);
+  // Friend requests loaded from backend for accurate status
+  const [backendRequests, setBackendRequests] = useState<FriendRequest[]>([]);
+  // Track in-flight send operations per profile principalId
+  const [sendingTo, setSendingTo] = useState<Set<string>>(new Set());
 
   // Load profiles from backend on mount
+  const loadProfiles = useCallback(async () => {
+    if (!actor) return;
+    setLoadingProfiles(true);
+    try {
+      const results = await actor.getAllProfilesPublic();
+      const mapped: LocalUserProfile[] = results.map((p) => ({
+        name: p.name,
+        avatarUrl: p.avatarUrl || "",
+        rollNumber: p.rollNumber || "",
+        role: (p.role as UserRole) || "Student",
+        department: p.department || "",
+        year: p.yearOfDegree || "",
+        bio: p.bio || "",
+        principalId: p.principalId,
+        course: p.course || "",
+        yearOfDegree: p.yearOfDegree || "",
+        division: p.division || "",
+        email: p.email || "",
+        mobile: p.mobile || "",
+      }));
+      setBackendProfiles(mapped);
+    } catch {
+      // Fall back to localStorage
+      setBackendProfiles(getAllUserProfiles());
+    } finally {
+      setLoadingProfiles(false);
+    }
+  }, [actor]);
+
+  // Load friend requests from backend for accurate status
+  const loadFriendRequests = useCallback(async () => {
+    if (!actor) return;
+    try {
+      const reqs = await actor.getFriendRequests();
+      const local: FriendRequest[] = reqs.map((r: BackendFriendRequest) => ({
+        id: r.id,
+        fromId: r.fromId,
+        fromName: r.fromName,
+        fromAvatar: r.fromAvatar,
+        toId: r.toId,
+        status: r.status as FriendRequest["status"],
+        timestamp: Number(r.timestamp),
+      }));
+      setBackendRequests(local);
+    } catch {
+      // ignore
+    }
+  }, [actor]);
+
   useEffect(() => {
     if (!actor || actorFetching) return;
-
-    async function loadProfiles() {
-      setLoadingProfiles(true);
-      try {
-        const results = await actor!.getAllProfilesPublic();
-        const mapped: LocalUserProfile[] = results.map((p) => ({
-          name: p.name,
-          avatarUrl: p.avatarUrl || "",
-          rollNumber: p.rollNumber || "",
-          role: (p.role as UserRole) || "Student",
-          department: p.department || "",
-          year: p.yearOfDegree || "",
-          bio: p.bio || "",
-          principalId: p.principalId,
-          course: p.course || "",
-          yearOfDegree: p.yearOfDegree || "",
-          division: p.division || "",
-          email: p.email || "",
-          mobile: p.mobile || "",
-        }));
-        setBackendProfiles(mapped);
-      } catch {
-        // Fall back to localStorage
-        setBackendProfiles(getAllUserProfiles());
-      } finally {
-        setLoadingProfiles(false);
-      }
-    }
-
-    loadProfiles();
-  }, [actor, actorFetching]);
+    void loadProfiles();
+    void loadFriendRequests();
+  }, [actor, actorFetching, loadProfiles, loadFriendRequests]);
 
   const allProfiles = useMemo(() => {
     const source =
@@ -97,6 +126,25 @@ export function DirectoryPage() {
     // Filter out current user
     return source.filter((p) => p.principalId !== currentUser?.principalId);
   }, [backendProfiles, currentUser]);
+
+  // Derive friendship status from backend requests
+  const getFriendshipStatus = useCallback(
+    (targetId: string): FriendshipStatus => {
+      if (!currentUser) return "none";
+      const myId = currentUser.principalId;
+      const relevant = backendRequests.find(
+        (r) =>
+          (r.fromId === myId && r.toId === targetId) ||
+          (r.fromId === targetId && r.toId === myId),
+      );
+      if (!relevant) return "none";
+      if (relevant.status === "accepted") return "friends";
+      if (relevant.status === "declined") return "none";
+      if (relevant.fromId === myId) return "pending_sent";
+      return "pending_received";
+    },
+    [currentUser, backendRequests],
+  );
 
   // Derive unique filters
   const courses = useMemo(() => {
@@ -151,6 +199,50 @@ export function DirectoryPage() {
     divisionFilter !== "all" ||
     yearFilter !== "all";
 
+  async function handleSendFriendRequest(toProfile: LocalUserProfile) {
+    if (!actor || !currentUser) return;
+    const myId = currentUser.principalId;
+
+    // Optimistically update status
+    setSendingTo((prev) => new Set(prev).add(toProfile.principalId));
+
+    const req = {
+      id: generateId(),
+      fromId: myId,
+      fromName: currentUser.name,
+      fromAvatar: currentUser.avatarUrl,
+      toId: toProfile.principalId,
+      status: "pending",
+      timestamp: BigInt(Date.now()),
+    };
+
+    try {
+      await actor.sendFriendRequest(req);
+      // Reload requests to get accurate state
+      await loadFriendRequests();
+      toast.success(`Friend request sent to ${toProfile.name}!`);
+    } catch {
+      toast.error("Failed to send friend request. Please try again.");
+    } finally {
+      setSendingTo((prev) => {
+        const next = new Set(prev);
+        next.delete(toProfile.principalId);
+        return next;
+      });
+    }
+  }
+
+  async function handleAcceptFriendRequest(requestId: string) {
+    if (!actor) return;
+    try {
+      await actor.respondToFriendRequest(requestId, true);
+      await loadFriendRequests();
+      toast.success("Friend request accepted!");
+    } catch {
+      toast.error("Failed to accept request.");
+    }
+  }
+
   if (loadingProfiles && actorFetching) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[40vh] gap-3">
@@ -180,6 +272,7 @@ export function DirectoryPage() {
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Search by name, roll number, course..."
+            data-ocid="directory.search_input"
             className="pl-9 rounded-xl bg-background border-border"
           />
           {query && (
@@ -255,6 +348,7 @@ export function DirectoryPage() {
           {filtered.map((profile, index) => (
             <motion.div
               key={profile.principalId}
+              data-ocid={`directory.item.${index + 1}`}
               initial={{ opacity: 0, y: 12 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.25, delay: index * 0.04 }}
@@ -266,23 +360,27 @@ export function DirectoryPage() {
                   setActiveChatUser(profile.principalId);
                   setActiveTab("chat");
                 }}
-                friendshipStatus={getFriendshipStatus(profile.principalId)}
-                onAddFriend={() => sendFriendRequest(profile)}
+                friendshipStatus={
+                  sendingTo.has(profile.principalId)
+                    ? "pending_sent"
+                    : getFriendshipStatus(profile.principalId)
+                }
+                onAddFriend={() => handleSendFriendRequest(profile)}
                 onAcceptFriend={() => {
-                  const req = friendRequests.find(
+                  const req = backendRequests.find(
                     (r) =>
                       r.fromId === profile.principalId &&
                       r.toId === currentUser?.principalId &&
                       r.status === "pending",
                   );
-                  if (req) acceptFriendRequest(req.id);
+                  if (req) handleAcceptFriendRequest(req.id);
                 }}
               />
             </motion.div>
           ))}
         </div>
       ) : (
-        <div className="text-center py-16">
+        <div data-ocid="directory.empty_state" className="text-center py-16">
           <Users className="w-12 h-12 text-muted-foreground/40 mx-auto mb-4" />
           <p className="text-muted-foreground font-medium">No students found</p>
           {hasFilters && (
@@ -309,18 +407,20 @@ export function DirectoryPage() {
               posts={posts.filter(
                 (p) => p.authorId === viewingProfile.principalId,
               )}
-              friendshipStatus={getFriendshipStatus(viewingProfile.principalId)}
-              onAddFriend={() => {
-                sendFriendRequest(viewingProfile);
-              }}
+              friendshipStatus={
+                sendingTo.has(viewingProfile.principalId)
+                  ? "pending_sent"
+                  : getFriendshipStatus(viewingProfile.principalId)
+              }
+              onAddFriend={() => handleSendFriendRequest(viewingProfile)}
               onAcceptFriend={() => {
-                const req = friendRequests.find(
+                const req = backendRequests.find(
                   (r) =>
                     r.fromId === viewingProfile.principalId &&
                     r.toId === currentUser?.principalId &&
                     r.status === "pending",
                 );
-                if (req) acceptFriendRequest(req.id);
+                if (req) handleAcceptFriendRequest(req.id);
               }}
               onMessage={() => {
                 setActiveChatUser(viewingProfile.principalId);
@@ -334,12 +434,6 @@ export function DirectoryPage() {
     </div>
   );
 }
-
-type FriendshipStatus =
-  | "none"
-  | "pending_sent"
-  | "pending_received"
-  | "friends";
 
 function FriendActionButton({
   status,

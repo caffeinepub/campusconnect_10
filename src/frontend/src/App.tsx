@@ -22,7 +22,7 @@ import { ProfilePage } from "./pages/ProfilePage";
 import { ProfileSetupPage } from "./pages/ProfileSetupPage";
 import { SettingsPage } from "./pages/SettingsPage";
 import type { LocalUserProfile } from "./types/campus";
-import { ensureSeeded, getUserProfile, saveUserProfile } from "./utils/storage";
+import { getUserProfile, saveUserProfile } from "./utils/storage";
 
 export default function App() {
   const { identity, isInitializing } = useInternetIdentity();
@@ -68,10 +68,6 @@ function AppContent({ principalId }: { principalId: string }) {
   const { actor, isFetching } = useActor();
   const [checkingProfile, setCheckingProfile] = useState(true);
   const [hasChecked, setHasChecked] = useState(false);
-
-  useEffect(() => {
-    ensureSeeded();
-  }, []);
 
   // Check/load profile from backend first, then fall back to localStorage
   useEffect(() => {

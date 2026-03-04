@@ -162,7 +162,7 @@ export function ProfileSetupPage({ onComplete }: ProfileSetupPageProps) {
       };
 
       if (actor) {
-        await actor.registerUser({
+        await actor.registerOrUpdateUser({
           principalId,
           name: form.name,
           avatarUrl,
@@ -446,6 +446,7 @@ export function ProfileSetupPage({ onComplete }: ProfileSetupPageProps) {
             <Button
               type="submit"
               disabled={saving || !form.name || !form.role || !form.department}
+              data-ocid="profile.submit_button"
               className="w-full h-12 text-base font-semibold bg-[oklch(0.42_0.18_265)] hover:bg-[oklch(0.38_0.18_265)] text-white rounded-xl mt-2"
             >
               {saving ? (

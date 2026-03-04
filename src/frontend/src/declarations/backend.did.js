@@ -19,10 +19,70 @@ export const _CaffeineStorageRefillResult = IDL.Record({
   'success' : IDL.Opt(IDL.Bool),
   'topped_up_amount' : IDL.Opt(IDL.Nat),
 });
+export const BackendComment = IDL.Record({
+  'id' : IDL.Text,
+  'content' : IDL.Text,
+  'authorAvatar' : IDL.Text,
+  'authorId' : IDL.Text,
+  'authorName' : IDL.Text,
+  'timestamp' : IDL.Int,
+});
 export const UserRole = IDL.Variant({
   'admin' : IDL.Null,
   'user' : IDL.Null,
   'guest' : IDL.Null,
+});
+export const BackendActivity = IDL.Record({
+  'id' : IDL.Text,
+  'organizer' : IDL.Text,
+  'date' : IDL.Text,
+  'name' : IDL.Text,
+  'time' : IDL.Text,
+  'description' : IDL.Text,
+  'timestamp' : IDL.Int,
+  'category' : IDL.Text,
+  'registrations' : IDL.Nat,
+  'location' : IDL.Text,
+});
+export const BackendNotice = IDL.Record({
+  'id' : IDL.Text,
+  'title' : IDL.Text,
+  'content' : IDL.Text,
+  'authorName' : IDL.Text,
+  'authorRole' : IDL.Text,
+  'timestamp' : IDL.Int,
+  'priority' : IDL.Text,
+  'department' : IDL.Text,
+});
+export const BackendPollOption = IDL.Record({
+  'id' : IDL.Text,
+  'votes' : IDL.Nat,
+  'text' : IDL.Text,
+});
+export const BackendPoll = IDL.Record({
+  'id' : IDL.Text,
+  'active' : IDL.Bool,
+  'question' : IDL.Text,
+  'authorId' : IDL.Text,
+  'authorName' : IDL.Text,
+  'deadline' : IDL.Text,
+  'timestamp' : IDL.Int,
+  'options' : IDL.Vec(BackendPollOption),
+});
+export const BackendPost = IDL.Record({
+  'id' : IDL.Text,
+  'content' : IDL.Text,
+  'authorAvatar' : IDL.Text,
+  'authorId' : IDL.Text,
+  'authorDivision' : IDL.Text,
+  'authorName' : IDL.Text,
+  'authorRole' : IDL.Text,
+  'likes' : IDL.Vec(IDL.Text),
+  'imageUrl' : IDL.Text,
+  'timestamp' : IDL.Int,
+  'comments' : IDL.Vec(BackendComment),
+  'videoUrl' : IDL.Text,
+  'authorCourse' : IDL.Text,
 });
 export const StudentProfile = IDL.Record({
   'bio' : IDL.Text,
@@ -37,6 +97,22 @@ export const StudentProfile = IDL.Record({
   'department' : IDL.Text,
   'course' : IDL.Text,
   'principalId' : IDL.Text,
+});
+export const BackendChatMessage = IDL.Record({
+  'id' : IDL.Text,
+  'content' : IDL.Text,
+  'receiverId' : IDL.Text,
+  'timestamp' : IDL.Int,
+  'senderId' : IDL.Text,
+});
+export const BackendFriendRequest = IDL.Record({
+  'id' : IDL.Text,
+  'status' : IDL.Text,
+  'fromAvatar' : IDL.Text,
+  'toId' : IDL.Text,
+  'timestamp' : IDL.Int,
+  'fromName' : IDL.Text,
+  'fromId' : IDL.Text,
 });
 
 export const idlService = IDL.Service({
@@ -67,12 +143,34 @@ export const idlService = IDL.Service({
     ),
   '_caffeineStorageUpdateGatewayPrincipals' : IDL.Func([], [], []),
   '_initializeAccessControlWithSecret' : IDL.Func([IDL.Text], [], []),
+  'addComment' : IDL.Func([IDL.Text, BackendComment], [], []),
   'assignCallerUserRole' : IDL.Func([IDL.Principal, UserRole], [], []),
+  'createActivity' : IDL.Func([BackendActivity], [], []),
+  'createNotice' : IDL.Func([BackendNotice], [], []),
+  'createPoll' : IDL.Func([BackendPoll], [], []),
+  'createPost' : IDL.Func([BackendPost], [], []),
+  'deleteMyAccount' : IDL.Func([], [], []),
+  'deletePost' : IDL.Func([IDL.Text], [], []),
   'deleteProfile' : IDL.Func([IDL.Text], [], []),
+  'getAllActivities' : IDL.Func([], [IDL.Vec(BackendActivity)], ['query']),
+  'getAllNotices' : IDL.Func([], [IDL.Vec(BackendNotice)], ['query']),
+  'getAllPolls' : IDL.Func([], [IDL.Vec(BackendPoll)], ['query']),
+  'getAllPosts' : IDL.Func([], [IDL.Vec(BackendPost)], ['query']),
   'getAllProfiles' : IDL.Func([], [IDL.Vec(StudentProfile)], ['query']),
   'getAllProfilesPublic' : IDL.Func([], [IDL.Vec(StudentProfile)], ['query']),
   'getCallerUserProfile' : IDL.Func([], [IDL.Opt(StudentProfile)], ['query']),
   'getCallerUserRole' : IDL.Func([], [UserRole], ['query']),
+  'getChatMessagesWith' : IDL.Func(
+      [IDL.Text],
+      [IDL.Vec(BackendChatMessage)],
+      ['query'],
+    ),
+  'getFriendRequests' : IDL.Func(
+      [],
+      [IDL.Vec(BackendFriendRequest)],
+      ['query'],
+    ),
+  'getMyPollVote' : IDL.Func([IDL.Text], [IDL.Opt(IDL.Text)], ['query']),
   'getMyProfile' : IDL.Func([], [IDL.Opt(StudentProfile)], ['query']),
   'getUserProfile' : IDL.Func(
       [IDL.Principal],
@@ -80,9 +178,14 @@ export const idlService = IDL.Service({
       ['query'],
     ),
   'isCallerAdmin' : IDL.Func([], [IDL.Bool], ['query']),
-  'registerUser' : IDL.Func([StudentProfile], [], []),
+  'likePost' : IDL.Func([IDL.Text], [], []),
+  'registerOrUpdateUser' : IDL.Func([StudentProfile], [], []),
+  'respondToFriendRequest' : IDL.Func([IDL.Text, IDL.Bool], [], []),
   'saveCallerUserProfile' : IDL.Func([StudentProfile], [], []),
-  'updateProfile' : IDL.Func([StudentProfile], [], []),
+  'sendChatMessage' : IDL.Func([BackendChatMessage], [], []),
+  'sendFriendRequest' : IDL.Func([BackendFriendRequest], [], []),
+  'setUserRole' : IDL.Func([IDL.Principal, UserRole], [], []),
+  'votePoll' : IDL.Func([IDL.Text, IDL.Text], [], []),
 });
 
 export const idlInitArgs = [];
@@ -99,10 +202,70 @@ export const idlFactory = ({ IDL }) => {
     'success' : IDL.Opt(IDL.Bool),
     'topped_up_amount' : IDL.Opt(IDL.Nat),
   });
+  const BackendComment = IDL.Record({
+    'id' : IDL.Text,
+    'content' : IDL.Text,
+    'authorAvatar' : IDL.Text,
+    'authorId' : IDL.Text,
+    'authorName' : IDL.Text,
+    'timestamp' : IDL.Int,
+  });
   const UserRole = IDL.Variant({
     'admin' : IDL.Null,
     'user' : IDL.Null,
     'guest' : IDL.Null,
+  });
+  const BackendActivity = IDL.Record({
+    'id' : IDL.Text,
+    'organizer' : IDL.Text,
+    'date' : IDL.Text,
+    'name' : IDL.Text,
+    'time' : IDL.Text,
+    'description' : IDL.Text,
+    'timestamp' : IDL.Int,
+    'category' : IDL.Text,
+    'registrations' : IDL.Nat,
+    'location' : IDL.Text,
+  });
+  const BackendNotice = IDL.Record({
+    'id' : IDL.Text,
+    'title' : IDL.Text,
+    'content' : IDL.Text,
+    'authorName' : IDL.Text,
+    'authorRole' : IDL.Text,
+    'timestamp' : IDL.Int,
+    'priority' : IDL.Text,
+    'department' : IDL.Text,
+  });
+  const BackendPollOption = IDL.Record({
+    'id' : IDL.Text,
+    'votes' : IDL.Nat,
+    'text' : IDL.Text,
+  });
+  const BackendPoll = IDL.Record({
+    'id' : IDL.Text,
+    'active' : IDL.Bool,
+    'question' : IDL.Text,
+    'authorId' : IDL.Text,
+    'authorName' : IDL.Text,
+    'deadline' : IDL.Text,
+    'timestamp' : IDL.Int,
+    'options' : IDL.Vec(BackendPollOption),
+  });
+  const BackendPost = IDL.Record({
+    'id' : IDL.Text,
+    'content' : IDL.Text,
+    'authorAvatar' : IDL.Text,
+    'authorId' : IDL.Text,
+    'authorDivision' : IDL.Text,
+    'authorName' : IDL.Text,
+    'authorRole' : IDL.Text,
+    'likes' : IDL.Vec(IDL.Text),
+    'imageUrl' : IDL.Text,
+    'timestamp' : IDL.Int,
+    'comments' : IDL.Vec(BackendComment),
+    'videoUrl' : IDL.Text,
+    'authorCourse' : IDL.Text,
   });
   const StudentProfile = IDL.Record({
     'bio' : IDL.Text,
@@ -117,6 +280,22 @@ export const idlFactory = ({ IDL }) => {
     'department' : IDL.Text,
     'course' : IDL.Text,
     'principalId' : IDL.Text,
+  });
+  const BackendChatMessage = IDL.Record({
+    'id' : IDL.Text,
+    'content' : IDL.Text,
+    'receiverId' : IDL.Text,
+    'timestamp' : IDL.Int,
+    'senderId' : IDL.Text,
+  });
+  const BackendFriendRequest = IDL.Record({
+    'id' : IDL.Text,
+    'status' : IDL.Text,
+    'fromAvatar' : IDL.Text,
+    'toId' : IDL.Text,
+    'timestamp' : IDL.Int,
+    'fromName' : IDL.Text,
+    'fromId' : IDL.Text,
   });
   
   return IDL.Service({
@@ -147,12 +326,34 @@ export const idlFactory = ({ IDL }) => {
       ),
     '_caffeineStorageUpdateGatewayPrincipals' : IDL.Func([], [], []),
     '_initializeAccessControlWithSecret' : IDL.Func([IDL.Text], [], []),
+    'addComment' : IDL.Func([IDL.Text, BackendComment], [], []),
     'assignCallerUserRole' : IDL.Func([IDL.Principal, UserRole], [], []),
+    'createActivity' : IDL.Func([BackendActivity], [], []),
+    'createNotice' : IDL.Func([BackendNotice], [], []),
+    'createPoll' : IDL.Func([BackendPoll], [], []),
+    'createPost' : IDL.Func([BackendPost], [], []),
+    'deleteMyAccount' : IDL.Func([], [], []),
+    'deletePost' : IDL.Func([IDL.Text], [], []),
     'deleteProfile' : IDL.Func([IDL.Text], [], []),
+    'getAllActivities' : IDL.Func([], [IDL.Vec(BackendActivity)], ['query']),
+    'getAllNotices' : IDL.Func([], [IDL.Vec(BackendNotice)], ['query']),
+    'getAllPolls' : IDL.Func([], [IDL.Vec(BackendPoll)], ['query']),
+    'getAllPosts' : IDL.Func([], [IDL.Vec(BackendPost)], ['query']),
     'getAllProfiles' : IDL.Func([], [IDL.Vec(StudentProfile)], ['query']),
     'getAllProfilesPublic' : IDL.Func([], [IDL.Vec(StudentProfile)], ['query']),
     'getCallerUserProfile' : IDL.Func([], [IDL.Opt(StudentProfile)], ['query']),
     'getCallerUserRole' : IDL.Func([], [UserRole], ['query']),
+    'getChatMessagesWith' : IDL.Func(
+        [IDL.Text],
+        [IDL.Vec(BackendChatMessage)],
+        ['query'],
+      ),
+    'getFriendRequests' : IDL.Func(
+        [],
+        [IDL.Vec(BackendFriendRequest)],
+        ['query'],
+      ),
+    'getMyPollVote' : IDL.Func([IDL.Text], [IDL.Opt(IDL.Text)], ['query']),
     'getMyProfile' : IDL.Func([], [IDL.Opt(StudentProfile)], ['query']),
     'getUserProfile' : IDL.Func(
         [IDL.Principal],
@@ -160,9 +361,14 @@ export const idlFactory = ({ IDL }) => {
         ['query'],
       ),
     'isCallerAdmin' : IDL.Func([], [IDL.Bool], ['query']),
-    'registerUser' : IDL.Func([StudentProfile], [], []),
+    'likePost' : IDL.Func([IDL.Text], [], []),
+    'registerOrUpdateUser' : IDL.Func([StudentProfile], [], []),
+    'respondToFriendRequest' : IDL.Func([IDL.Text, IDL.Bool], [], []),
     'saveCallerUserProfile' : IDL.Func([StudentProfile], [], []),
-    'updateProfile' : IDL.Func([StudentProfile], [], []),
+    'sendChatMessage' : IDL.Func([BackendChatMessage], [], []),
+    'sendFriendRequest' : IDL.Func([BackendFriendRequest], [], []),
+    'setUserRole' : IDL.Func([IDL.Principal, UserRole], [], []),
+    'votePoll' : IDL.Func([IDL.Text, IDL.Text], [], []),
   });
 };
 

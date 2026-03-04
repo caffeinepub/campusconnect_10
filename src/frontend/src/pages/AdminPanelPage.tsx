@@ -10,6 +10,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { Principal } from "@icp-sdk/core/principal";
 import {
   AlertTriangle,
   Crown,
@@ -23,6 +24,7 @@ import {
 import { motion } from "motion/react";
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
+import { UserRole as BackendUserRole } from "../backend";
 import { useApp } from "../context/AppContext";
 import { useActor } from "../hooks/useActor";
 import type { LocalUserProfile, UserRole } from "../types/campus";
@@ -261,8 +263,8 @@ export function AdminPanelPage() {
     }
   }
 
-  function handleToggleRole(profile: LocalUserProfile) {
-    if (!currentUser) return;
+  async function handleToggleRole(profile: LocalUserProfile) {
+    if (!currentUser || !actor) return;
     const newRole: UserRole = profile.role === "Admin" ? "Student" : "Admin";
     const updated: LocalUserProfile = { ...profile, role: newRole };
     saveUserProfile(updated);
@@ -275,6 +277,23 @@ export function AdminPanelPage() {
     // If toggling current user's own role, update context too
     if (profile.principalId === currentUser.principalId) {
       setCurrentUser(updated);
+    }
+
+    // Persist role change to backend using admin-only setUserRole
+    try {
+      const backendRole =
+        newRole === "Admin" ? BackendUserRole.admin : BackendUserRole.user;
+      await actor.setUserRole(
+        Principal.fromText(profile.principalId),
+        backendRole,
+      );
+    } catch {
+      toast.error(`Failed to save role change for ${profile.name} to backend.`);
+      // Revert local state
+      setBackendProfiles((prev) =>
+        prev.map((p) => (p.principalId === profile.principalId ? profile : p)),
+      );
+      return;
     }
 
     // Force allProfiles to re-read from backend too
@@ -312,6 +331,7 @@ export function AdminPanelPage() {
           onClick={handleExportCSV}
           disabled={exporting}
           size="sm"
+          data-ocid="admin.primary_button"
           className="rounded-xl gap-2 shrink-0"
         >
           {exporting ? (
@@ -375,6 +395,7 @@ export function AdminPanelPage() {
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 placeholder="Search by name, email, roll no, or course…"
+                data-ocid="admin.search_input"
                 className="pl-9 rounded-xl"
                 autoComplete="off"
               />
@@ -445,6 +466,7 @@ export function AdminPanelPage() {
                     {filtered.map((profile, idx) => (
                       <motion.tr
                         key={profile.principalId}
+                        data-ocid={`admin.item.${idx + 1}`}
                         initial={{ opacity: 0, x: -8 }}
                         animate={{ opacity: 1, x: 0 }}
                         transition={{ duration: 0.25, delay: idx * 0.03 }}

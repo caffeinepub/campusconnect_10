@@ -117,7 +117,7 @@ export function AuthPage() {
         <div
           className="absolute inset-0 bg-cover bg-center bg-no-repeat"
           style={{
-            backgroundImage: `url('/assets/uploads/WhatsApp-Image-2026-03-02-at-2.24.15-PM-1.jpeg')`,
+            backgroundImage: `url('/assets/uploads/17725086577036457519994028650466-1.jpg')`,
           }}
         />
         {/* Dark overlay */}
@@ -162,6 +162,7 @@ export function AuthPage() {
                   onClick={login}
                   disabled={isLoggingIn}
                   size="lg"
+                  data-ocid="auth.primary_button"
                   className="h-13 px-8 text-base font-bold bg-[oklch(0.42_0.18_265)] hover:bg-[oklch(0.38_0.18_265)] text-white rounded-2xl shadow-lg shadow-[oklch(0.3_0.15_265)]/40 gap-2"
                 >
                   {isLoggingIn ? (
@@ -308,6 +309,7 @@ export function AuthPage() {
                 onClick={login}
                 disabled={isLoggingIn}
                 size="lg"
+                data-ocid="auth.secondary_button"
                 className="h-14 px-10 text-base font-bold bg-white text-[oklch(0.25_0.1_265)] hover:bg-white/90 rounded-2xl shadow-lg gap-2"
               >
                 {isLoggingIn ? (

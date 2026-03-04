@@ -14,36 +14,186 @@ import {
   X,
 } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
-import { useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
+import type { BackendComment, BackendPost } from "../backend.d";
 import { RoleBadge } from "../components/RoleBadge";
 import { UserAvatar } from "../components/UserAvatar";
 import { useApp } from "../context/AppContext";
-import type { Post } from "../types/campus";
-import { formatTimeAgo } from "../utils/helpers";
+import { useActor } from "../hooks/useActor";
+import type { Comment, Post } from "../types/campus";
+import { formatTimeAgo, generateId } from "../utils/helpers";
+
+/** Convert a BackendPost to a frontend Post */
+function backendPostToLocal(bp: BackendPost): Post {
+  return {
+    id: bp.id,
+    authorId: bp.authorId,
+    authorName: bp.authorName,
+    authorRole: bp.authorRole as Post["authorRole"],
+    authorAvatar: bp.authorAvatar,
+    authorCourse: bp.authorCourse || undefined,
+    authorDivision: bp.authorDivision || undefined,
+    content: bp.content,
+    imageUrl: bp.imageUrl || undefined,
+    videoUrl: bp.videoUrl || undefined,
+    timestamp: Number(bp.timestamp),
+    likes: [...bp.likes],
+    comments: bp.comments.map((c: BackendComment) => ({
+      id: c.id,
+      authorId: c.authorId,
+      authorName: c.authorName,
+      authorAvatar: c.authorAvatar,
+      content: c.content,
+      timestamp: Number(c.timestamp),
+    })),
+  };
+}
 
 export function FeedPage() {
-  const { currentUser, posts } = useApp();
+  const { currentUser } = useApp();
+  const { actor, isFetching: actorFetching } = useActor();
+  const [posts, setPosts] = useState<Post[]>([]);
+  const [loadingPosts, setLoadingPosts] = useState(true);
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  const loadPosts = useCallback(async () => {
+    if (!actor) return;
+    try {
+      const backendPosts = await actor.getAllPosts();
+      const localPosts = backendPosts.map(backendPostToLocal);
+      // Sort newest first
+      localPosts.sort((a, b) => b.timestamp - a.timestamp);
+      setPosts(localPosts);
+    } catch {
+      // silently ignore polling errors
+    } finally {
+      setLoadingPosts(false);
+    }
+  }, [actor]);
+
+  // Load posts on mount / when actor ready
+  useEffect(() => {
+    if (!actor || actorFetching) return;
+    loadPosts();
+  }, [actor, actorFetching, loadPosts]);
+
+  // Poll every 15 seconds
+  useEffect(() => {
+    if (!actor || actorFetching) return;
+    intervalRef.current = setInterval(loadPosts, 15000);
+    return () => {
+      if (intervalRef.current) clearInterval(intervalRef.current);
+    };
+  }, [actor, actorFetching, loadPosts]);
+
+  async function handleLike(postId: string) {
+    if (!actor || !currentUser) return;
+    try {
+      await actor.likePost(postId);
+      await loadPosts();
+    } catch {
+      toast.error("Failed to like post");
+    }
+  }
+
+  async function handleAddComment(
+    postId: string,
+    comment: Omit<Comment, "id" | "timestamp">,
+  ) {
+    if (!actor || !currentUser) return;
+    const backendComment: BackendComment = {
+      id: generateId(),
+      authorId: comment.authorId,
+      authorName: comment.authorName,
+      authorAvatar: comment.authorAvatar,
+      content: comment.content,
+      timestamp: BigInt(Date.now()),
+    };
+    try {
+      await actor.addComment(postId, backendComment);
+      await loadPosts();
+    } catch {
+      toast.error("Failed to add comment");
+    }
+  }
+
+  async function handleCreatePost(postData: {
+    content: string;
+    imageUrl?: string;
+    videoUrl?: string;
+  }) {
+    if (!actor || !currentUser) return;
+    const backendPost: BackendPost = {
+      id: generateId(),
+      authorId: currentUser.principalId,
+      authorName: currentUser.name,
+      authorRole: currentUser.role,
+      authorAvatar: currentUser.avatarUrl,
+      authorCourse: currentUser.course || "",
+      authorDivision: currentUser.division || "",
+      content: postData.content,
+      imageUrl: postData.imageUrl || "",
+      videoUrl: postData.videoUrl || "",
+      timestamp: BigInt(Date.now()),
+      likes: [],
+      comments: [],
+    };
+    try {
+      await actor.createPost(backendPost);
+      await loadPosts();
+      toast.success("Post shared with your campus!");
+    } catch {
+      toast.error("Failed to create post. Please try again.");
+      throw new Error("Post creation failed");
+    }
+  }
+
+  if (loadingPosts && actorFetching) {
+    return (
+      <div
+        data-ocid="feed.loading_state"
+        className="flex flex-col items-center justify-center min-h-[40vh] gap-3"
+      >
+        <Loader2 className="w-6 h-6 animate-spin text-primary" />
+        <p className="text-sm text-muted-foreground">Loading posts...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-2xl mx-auto px-4 py-6 space-y-5">
       {/* Create post card */}
-      {currentUser && <CreatePostCard />}
+      {currentUser && <CreatePostCard onPost={handleCreatePost} />}
+
+      {/* Initial loading spinner (actor ready but posts loading) */}
+      {loadingPosts && !actorFetching && (
+        <div className="flex justify-center py-8">
+          <Loader2 className="w-5 h-5 animate-spin text-primary" />
+        </div>
+      )}
 
       {/* Posts */}
-      {posts.map((post, index) => (
-        <motion.div
-          key={post.id}
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.35, delay: index * 0.05 }}
-        >
-          <PostCard post={post} />
-        </motion.div>
-      ))}
+      {!loadingPosts &&
+        posts.map((post, index) => (
+          <motion.div
+            key={post.id}
+            data-ocid={`feed.item.${index + 1}`}
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.35, delay: index * 0.05 }}
+          >
+            <PostCard
+              post={post}
+              currentUser={currentUser}
+              onLike={() => handleLike(post.id)}
+              onAddComment={(comment) => handleAddComment(post.id, comment)}
+            />
+          </motion.div>
+        ))}
 
-      {posts.length === 0 && (
-        <div className="text-center py-16">
+      {!loadingPosts && posts.length === 0 && (
+        <div data-ocid="feed.empty_state" className="text-center py-16">
           <div className="text-4xl mb-3">📭</div>
           <p className="text-[oklch(0.5_0.03_255)] font-medium">
             No posts yet. Be the first to share!
@@ -54,8 +204,16 @@ export function FeedPage() {
   );
 }
 
-function CreatePostCard() {
-  const { currentUser, addPost } = useApp();
+function CreatePostCard({
+  onPost,
+}: {
+  onPost: (data: {
+    content: string;
+    imageUrl?: string;
+    videoUrl?: string;
+  }) => Promise<void>;
+}) {
+  const { currentUser } = useApp();
   const [content, setContent] = useState("");
   const [imageUrl, setImageUrl] = useState("");
   const [videoUrl, setVideoUrl] = useState("");
@@ -68,25 +226,22 @@ function CreatePostCard() {
   async function handlePost() {
     if (!content.trim()) return;
     setPosting(true);
-    await new Promise((r) => setTimeout(r, 300));
-    addPost({
-      authorId: currentUser!.principalId,
-      authorName: currentUser!.name,
-      authorRole: currentUser!.role,
-      authorAvatar: currentUser!.avatarUrl,
-      authorCourse: currentUser!.course || undefined,
-      authorDivision: currentUser!.division || undefined,
-      content: content.trim(),
-      imageUrl: imageUrl.trim() || undefined,
-      videoUrl: videoUrl.trim() || undefined,
-    });
-    setContent("");
-    setImageUrl("");
-    setVideoUrl("");
-    setShowImageInput(false);
-    setShowVideoInput(false);
-    setPosting(false);
-    toast.success("Post shared with your campus!");
+    try {
+      await onPost({
+        content: content.trim(),
+        imageUrl: imageUrl.trim() || undefined,
+        videoUrl: videoUrl.trim() || undefined,
+      });
+      setContent("");
+      setImageUrl("");
+      setVideoUrl("");
+      setShowImageInput(false);
+      setShowVideoInput(false);
+    } catch {
+      // error already toasted in parent
+    } finally {
+      setPosting(false);
+    }
   }
 
   return (
@@ -104,6 +259,7 @@ function CreatePostCard() {
               onChange={(e) => setContent(e.target.value)}
               placeholder={`What's on your mind, ${currentUser.name.split(" ")[0]}?`}
               className="border-[oklch(0.9_0.015_250)] rounded-xl resize-none focus-visible:ring-[oklch(0.42_0.18_265)] min-h-[80px] bg-[oklch(0.97_0.005_250)] placeholder:text-[oklch(0.65_0.02_255)]"
+              data-ocid="feed.textarea"
               rows={3}
             />
 
@@ -195,6 +351,7 @@ function CreatePostCard() {
                 onClick={handlePost}
                 disabled={!content.trim() || posting}
                 size="sm"
+                data-ocid="feed.submit_button"
                 className="gap-1.5 bg-[oklch(0.42_0.18_265)] hover:bg-[oklch(0.38_0.18_265)] text-white rounded-xl h-8 px-4 text-sm"
               >
                 {posting ? (
@@ -212,22 +369,26 @@ function CreatePostCard() {
   );
 }
 
-function PostCard({ post }: { post: Post }) {
-  const { currentUser, toggleLike, addComment } = useApp();
+function PostCard({
+  post,
+  currentUser,
+  onLike,
+  onAddComment,
+}: {
+  post: Post;
+  currentUser: import("../types/campus").LocalUserProfile | null;
+  onLike: () => void;
+  onAddComment: (comment: Omit<Comment, "id" | "timestamp">) => void;
+}) {
   const [showComments, setShowComments] = useState(false);
   const [commentText, setCommentText] = useState("");
   const principalId = currentUser?.principalId ?? "";
   const hasLiked = post.likes.includes(principalId);
 
-  function handleLike() {
-    if (!principalId) return;
-    toggleLike(post.id, principalId);
-  }
-
   function handleAddComment(e: React.FormEvent) {
     e.preventDefault();
     if (!commentText.trim() || !currentUser) return;
-    addComment(post.id, {
+    onAddComment({
       authorId: currentUser.principalId,
       authorName: currentUser.name,
       authorAvatar: currentUser.avatarUrl,
@@ -305,7 +466,7 @@ function PostCard({ post }: { post: Post }) {
         <div className="flex items-center gap-1 px-4 py-2.5 border-t border-[oklch(0.95_0.01_250)]">
           <button
             type="button"
-            onClick={handleLike}
+            onClick={onLike}
             className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-sm transition-all duration-150 ${
               hasLiked
                 ? "text-red-500 bg-red-50 hover:bg-red-100"
