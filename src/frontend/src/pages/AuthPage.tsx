@@ -332,21 +332,6 @@ export function AuthPage() {
           </motion.div>
         </div>
       </section>
-
-      {/* ── FOOTER ── */}
-      <footer className="bg-white border-t border-[oklch(0.92_0.015_250)] py-5 text-center">
-        <p className="text-xs text-[oklch(0.55_0.02_255)]">
-          © {new Date().getFullYear()}. Built with ❤️ using{" "}
-          <a
-            href={`https://caffeine.ai?utm_source=caffeine-footer&utm_medium=referral&utm_content=${encodeURIComponent(window.location.hostname)}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-[oklch(0.42_0.18_265)] hover:underline font-medium"
-          >
-            caffeine.ai
-          </a>
-        </p>
-      </footer>
     </div>
   );
 }

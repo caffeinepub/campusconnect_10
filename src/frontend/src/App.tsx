@@ -166,19 +166,6 @@ function MainLayout() {
         <main className="flex-1 overflow-auto">
           <PageContent activeTab={activeTab} />
         </main>
-
-        {/* Footer */}
-        <footer className="text-center py-4 text-xs text-muted-foreground border-t border-border bg-card/50">
-          © {new Date().getFullYear()}. Built with ❤️ using{" "}
-          <a
-            href={`https://caffeine.ai?utm_source=caffeine-footer&utm_medium=referral&utm_content=${encodeURIComponent(window.location.hostname)}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-primary hover:underline font-medium"
-          >
-            caffeine.ai
-          </a>
-        </footer>
       </div>
     </div>
   );
