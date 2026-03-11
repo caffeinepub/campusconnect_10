@@ -1,28 +1,73 @@
 import { Toaster } from "@/components/ui/sonner";
 import { GraduationCap, Loader2 } from "lucide-react";
-import { useEffect, useState } from "react";
+import { Suspense, lazy, useEffect, useState } from "react";
+import { InstallBanner } from "./components/InstallBanner";
 import { Sidebar } from "./components/Sidebar";
 import { TopBar } from "./components/TopBar";
 import { AppProvider, useApp } from "./context/AppContext";
 import { useActor } from "./hooks/useActor";
 import { useInternetIdentity } from "./hooks/useInternetIdentity";
-import { ActivitiesPage } from "./pages/ActivitiesPage";
-import { AdminPanelPage } from "./pages/AdminPanelPage";
 import { AuthPage } from "./pages/AuthPage";
-import { BarcodeScannerPage } from "./pages/BarcodeScannerPage";
-import { ChatPage } from "./pages/ChatPage";
-import { DashboardPage } from "./pages/DashboardPage";
-import { DirectoryPage } from "./pages/DirectoryPage";
-import { FeedPage } from "./pages/FeedPage";
-import { FriendRequestsPage } from "./pages/FriendRequestsPage";
-import { LostFoundPage } from "./pages/LostFoundPage";
-import { NoticesPage } from "./pages/NoticesPage";
-import { PollsPage } from "./pages/PollsPage";
-import { ProfilePage } from "./pages/ProfilePage";
-import { ProfileSetupPage } from "./pages/ProfileSetupPage";
-import { SettingsPage } from "./pages/SettingsPage";
 import type { LocalUserProfile } from "./types/campus";
 import { getUserProfile, saveUserProfile } from "./utils/storage";
+
+// Lazy-load all heavy pages so the initial bundle stays small
+const ActivitiesPage = lazy(() =>
+  import("./pages/ActivitiesPage").then((m) => ({ default: m.ActivitiesPage })),
+);
+const AdminPanelPage = lazy(() =>
+  import("./pages/AdminPanelPage").then((m) => ({ default: m.AdminPanelPage })),
+);
+const BarcodeScannerPage = lazy(() =>
+  import("./pages/BarcodeScannerPage").then((m) => ({
+    default: m.BarcodeScannerPage,
+  })),
+);
+const ChatPage = lazy(() =>
+  import("./pages/ChatPage").then((m) => ({ default: m.ChatPage })),
+);
+const DashboardPage = lazy(() =>
+  import("./pages/DashboardPage").then((m) => ({ default: m.DashboardPage })),
+);
+const DirectoryPage = lazy(() =>
+  import("./pages/DirectoryPage").then((m) => ({ default: m.DirectoryPage })),
+);
+const FeedPage = lazy(() =>
+  import("./pages/FeedPage").then((m) => ({ default: m.FeedPage })),
+);
+const FriendRequestsPage = lazy(() =>
+  import("./pages/FriendRequestsPage").then((m) => ({
+    default: m.FriendRequestsPage,
+  })),
+);
+const LostFoundPage = lazy(() =>
+  import("./pages/LostFoundPage").then((m) => ({ default: m.LostFoundPage })),
+);
+const NoticesPage = lazy(() =>
+  import("./pages/NoticesPage").then((m) => ({ default: m.NoticesPage })),
+);
+const PollsPage = lazy(() =>
+  import("./pages/PollsPage").then((m) => ({ default: m.PollsPage })),
+);
+const ProfilePage = lazy(() =>
+  import("./pages/ProfilePage").then((m) => ({ default: m.ProfilePage })),
+);
+const ProfileSetupPage = lazy(() =>
+  import("./pages/ProfileSetupPage").then((m) => ({
+    default: m.ProfileSetupPage,
+  })),
+);
+const SettingsPage = lazy(() =>
+  import("./pages/SettingsPage").then((m) => ({ default: m.SettingsPage })),
+);
+
+function PageSpinner() {
+  return (
+    <div className="flex-1 flex items-center justify-center py-20">
+      <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+    </div>
+  );
+}
 
 export default function App() {
   const { identity, isInitializing } = useInternetIdentity();
@@ -58,6 +103,7 @@ export default function App() {
       <AppProvider principalId={principalId}>
         <AppContent principalId={principalId} />
       </AppProvider>
+      <InstallBanner />
       <Toaster richColors />
     </>
   );
@@ -75,7 +121,6 @@ function AppContent({ principalId }: { principalId: string }) {
 
     async function checkProfile() {
       try {
-        // Always try backend first — it's the shared source of truth
         if (actor) {
           const backendProfile = await actor.getMyProfile();
           if (backendProfile) {
@@ -101,14 +146,11 @@ function AppContent({ principalId }: { principalId: string }) {
           }
         }
 
-        // Fall back to localStorage if backend call returned nothing
         const localProfile = getUserProfile(principalId);
         if (localProfile) {
           setCurrentUser(localProfile);
         }
-        // If neither has a profile, currentUser stays null → ProfileSetupPage is shown
       } catch {
-        // Backend call failed — fall back to localStorage
         const localProfile = getUserProfile(principalId);
         if (localProfile) {
           setCurrentUser(localProfile);
@@ -138,11 +180,13 @@ function AppContent({ principalId }: { principalId: string }) {
 
   if (!currentUser) {
     return (
-      <ProfileSetupPage
-        onComplete={(profile) => {
-          setCurrentUser(profile);
-        }}
-      />
+      <Suspense fallback={<PageSpinner />}>
+        <ProfileSetupPage
+          onComplete={(profile) => {
+            setCurrentUser(profile);
+          }}
+        />
+      </Suspense>
     );
   }
 
@@ -160,11 +204,12 @@ function MainLayout() {
         onMobileClose={() => setMobileMenuOpen(false)}
       />
 
-      {/* Main content area — offset for desktop sidebar */}
       <div className="flex-1 lg:ml-60 flex flex-col min-h-screen">
         <TopBar onMobileMenuOpen={() => setMobileMenuOpen(true)} />
         <main className="flex-1 overflow-auto">
-          <PageContent activeTab={activeTab} />
+          <Suspense fallback={<PageSpinner />}>
+            <PageContent activeTab={activeTab} />
+          </Suspense>
         </main>
       </div>
     </div>
