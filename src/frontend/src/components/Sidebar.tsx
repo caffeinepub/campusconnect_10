@@ -20,7 +20,6 @@ import {
 import { AnimatePresence, motion } from "motion/react";
 import { useApp } from "../context/AppContext";
 import { useInternetIdentity } from "../hooks/useInternetIdentity";
-import { InstallSidebarButton } from "./InstallBanner";
 import { RoleBadge } from "./RoleBadge";
 import { UserAvatar } from "./UserAvatar";
 
@@ -122,11 +121,6 @@ export function Sidebar({ mobileOpen, onMobileClose }: SidebarProps) {
             Admin Panel
           </button>
         )}
-
-        {/* Install App button — always visible until installed */}
-        <div className="pt-1 border-t border-sidebar-border/50 mt-1">
-          <InstallSidebarButton />
-        </div>
       </nav>
 
       {/* User card at bottom */}
